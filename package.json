@@ -1,0 +1,17 @@
+{
+  "name": "personal-travel-planner",
+  "version": "1.0.0",
+  "description": "A personal travel planning web application built with the MERN stack and Tailwind CSS.",
+  "main": "index.js",
+  "scripts": {
+    "install-all": "npm install && npm install --prefix backend && npm install --prefix frontend",
+    "dev": "concurrently \"npm:dev-server\" \"npm:dev-client\"",
+    "dev-server": "npm run dev --prefix backend",
+    "dev-client": "npm run dev --prefix frontend"
+  },
+  "author": "Gemini",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.0.1"
+  }
+}

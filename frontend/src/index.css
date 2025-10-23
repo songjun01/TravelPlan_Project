@@ -1,0 +1,9 @@
+/**
+ * src/index.css
+ * 이 파일은 Tailwind CSS의 기본 지시문(directives)을 포함합니다.
+ * 빌드 과정에서 이 파일은 프로젝트에 필요한 모든 Tailwind CSS 코드로 대체됩니다.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
