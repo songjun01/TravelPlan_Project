@@ -8,7 +8,9 @@
  */
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
+// 아이콘 라이브러리에서 아이콘들을 가져옵니다.
 import { FaMapPin, FaBus, FaPen } from 'react-icons/fa';
+import { IoArrowBack } from 'react-icons/io5'; // 뒤로가기 아이콘 추가
 
 // 상세 페이지 렌더링을 위한 단일 여행 계획 목업(mock) 데이터
 // 실제 애플리케이션에서는 useParams로 받은 ID를 이용해 서버에서 데이터를 가져와야 합니다.
@@ -62,6 +64,15 @@ function TravelDetailPage() {
     <div className="bg-gray-50 min-h-screen">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         
+        {/* 메인 페이지로 돌아가는 뒤로가기 버튼 */}
+        <Link 
+          to="/"
+          className="inline-block p-2 mb-4 rounded-full hover:bg-gray-200 transition-colors"
+          title="메인으로 돌아가기"
+        >
+          <IoArrowBack size={24} className="text-gray-700" />
+        </Link>
+
         {/* 1. 최상단 헤더 */}
         <header className="mb-8">
           <h1 className="text-4xl font-extrabold text-gray-900">{plan.title}</h1>
