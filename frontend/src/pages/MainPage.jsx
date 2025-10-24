@@ -47,7 +47,12 @@ const formatDate = (dateStr) => {
  * @param {object} plan - 여행 계획 데이터 객체
  */
 const TravelPlanCard = ({ plan }) => (
-  <Link to={`/travel/${plan.id}`} className="block bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 ease-in-out">
+  // Link 컴포넌트를 사용하여 카드 전체를 클릭 가능한 링크로 만듭니다.
+  // 마우스를 올리면 그림자가 짙어지고 카드가 약간 확대되는 호버 효과를 추가합니다.
+  <Link 
+    to={`/plan/${plan.id}`} 
+    className="block bg-white p-6 rounded-lg shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out"
+  >
     <h3 className="text-xl font-bold text-gray-800 truncate">{plan.title}</h3>
     <p className="text-gray-600 mt-2">{plan.location}</p>
     <p className="text-gray-500 text-sm mt-4">{`${formatDate(plan.startDate)} ~ ${formatDate(plan.endDate)}`}</p>

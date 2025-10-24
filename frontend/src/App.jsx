@@ -17,11 +17,17 @@ function App() {
       {/* Routes는 여러 Route를 감싸는 컨테이너입니다. */}
       <Routes>
         {/* 각 Route는 특정 경로(path)와 렌더링할 컴포넌트(element)를 정의합니다. */}
+        {/* 메인 페이지 라우트 */}
         <Route path="/" element={<MainPage />} />
-        <Route path="/travel/:id" element={<TravelDetailPage />} />
+
+        {/* 여행 상세 페이지 라우트 (동적 파라미터: planId) */}
+        <Route path="/plan/:planId" element={<TravelDetailPage />} />
+
+        {/* 새로운 계획을 생성하는 편집기 라우트 */}
         <Route path="/editor" element={<PlanEditorPage />} />
-        {/* ID와 함께 에디터 경로 추가 */}
-        <Route path="/editor/:id" element={<PlanEditorPage />} />
+
+        {/* 기존 계획을 수정하는 편집기 라우트 (동적 파라미터: planId) */}
+        <Route path="/edit/:planId" element={<PlanEditorPage />} />
       </Routes>
     </Router>
   );
