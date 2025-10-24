@@ -195,6 +195,86 @@
 
 ---
 
+- **작업 내용**: 여행 추가 페이지 구현
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, 메인 화면의 '+' 버튼을 클릭했을 때 이동하는 **'새 여행 계획 추가 페이지'**를 구현합니다.
+
+이 페이지는 사용자가 여행의 기본 정보를 설정하고, 날짜별 일정을 추가하는 페이지입니다.
+
+### 1. 신규 라이브러리 설치 (프롬프트 내 지시)
+
+* 이 기능을 위해 날짜 선택 라이브러리가 필요합니다. `frontend` 폴더에 `react-datepicker`와 `date-fns`를 설치하도록 `package.json`을 수정하고, 관련 안내를 `README.md`에 추가해 주세요.
+* `react-datepicker`의 기본 CSS를 `frontend/src/main.jsx` (또는 `index.css`)에 import 해주세요. (예: `import 'react-datepicker/dist/react-datepicker.css';`)
+
+### 2. 라우팅 및 링크 설정
+
+1.  **`frontend/src/App.jsx` 수정:**
+    * 새 페이지를 위한 라우트를 추가합니다.
+    * `<Route path="/create-plan" element={<PlanEditorPage />} />`
+
+2.  **`frontend/src/pages/MainPage.jsx` 수정:**
+    * 메인 페이지의 마지막에 있던 "새 계획 추가" 버튼을 `react-router-dom`의 `<Link>` 컴포넌트로 감싸주세요.
+    * 클릭 시 `/create-plan` 경로로 이동하도록 `to` 속성을 설정합니다.
+
+### 3. 계획 추가/수정 페이지 구현 (`frontend/src/pages/PlanEditorPage.jsx`)
+
+이전에 플레이스홀더로 만들었던 `PlanEditorPage.jsx` 파일의 내용을 다음 요구사항에 맞게 구현합니다. 이 페이지는 상태 관리가 중요하므로 `useState`를 적극적으로 활용합니다.
+
+1.  **페이지 전체 레이아웃:**
+    * 페이지 상단에 "새로운 여행 계획 만들기" 제목을 표시합니다.
+    * 메인 페이지로 돌아가는 '뒤로가기' 버튼을 `TravelDetailPage`에서 구현한 것과 동일하게 추가합니다. (`to="/"`)
+    * 페이지 하단에 "저장하기" 버튼을 배치합니다.
+
+2.  **상태(State) 관리 (`useState`):**
+    * 여행 전체 데이터를 관리할 `plan` 상태를 정의합니다.
+        * `title` (문자열, 초기값: "")
+        * `region` (문자열, 초기값: "")
+        * `startDate` (Date 객체, 초기값: `new Date()`)
+        * `endDate` (Date 객체, 초기값: `startDate`와 동일)
+        * `itinerary` (배열, 초기값: `[]`)
+
+3.  **컴포넌트 구현:**
+
+    * **1) 기본 정보 입력 (폼):**
+        * **여행 제목:** `input` 필드. (값: `plan.title`, `onChange` 핸들러)
+        * **여행 지역:** `input` 필드. (값: `plan.region`, `onChange` 핸들러)
+
+    * **2) 여행 날짜 선택 (Date Picker):**
+        * `react-datepicker` 라이브러리를 사용합니다.
+        * **시작 날짜:** `<DatePicker selected={plan.startDate} ... />`
+        * **종료 날짜:** `<DatePicker selected={plan.endDate} ... />`
+        * `selectsRange`, `startDate`, `endDate` 옵션을 사용하여 범위 선택(range selection)을 구현합니다.
+        * 날짜가 변경되면 `plan.startDate`와 `plan.endDate` 상태를 업데이트하는 핸들러를 구현합니다.
+        * (중요) 날짜 범위가 변경되면, 해당 날짜 범위에 맞게 `itinerary` 상태를 자동으로 생성하거나 초기화하는 로직을 추가합니다. (예: 3일짜리 여행이면 `itinerary`가 3개의 빈 날짜 객체를 가지도록 설정)
+
+    * **3) 세부 일정 편집기 (Itinerary Editor):**
+        * `plan.itinerary` 배열을 `map`으로 순회하며 날짜별 편집 섹션을 렌더링합니다.
+        * 각 날짜 섹션(예: "Day 1 - 2025.11.01") 하단에 두 개의 버튼을 배치합니다:
+            * **[+ 방문 장소 추가] 버튼**
+            * **[+ 이동 경로 추가] 버튼**
+        * 각 버튼 클릭 시, `itinerary` 상태의 해당 날짜 `events` 배열에 새로운 '방문(visit)' 또는 '이동(move)' 객체를 추가하는 핸들러를 구현합니다. (초기에는 빈 값으로)
+
+    * **4) 이벤트 입력 폼 (동적 생성):**
+        * `itinerary`의 `events` 배열을 `map`으로 순회하며 렌더링합니다.
+        * `event.type === 'visit'`일 경우:
+            * '방문 장소', '주소', '거주 시간'을 입력할 수 있는 `input` 필드들을 보여줍니다.
+        * `event.type === 'move'`일 경우:
+            * '교통수단', '출발 장소', '도착 장소', '소요 시간'을 입력할 수 있는 `input` 필드들을 보여줍니다.
+        * 각 `input` 필드는 `itinerary` 상태와 양방향 바인딩되어야 합니다. (상태 변경 핸들러 필요)
+        * 각 이벤트 항목 옆에 '삭제' (휴지통 아이콘) 버튼을 만들어 해당 이벤트를 `itinerary` 상태에서 제거하는 기능을 구현합니다.
+
+4.  **스타일링 및 주석:**
+    * 입력 폼과 버튼에 `tailwind.config.js`의 `primary` 색상을 적절히 사용하여 디자인 통일성을 유지합니다.
+    * `react-datepicker`가 기본 CSS 외에도 미니멀한 디자인에 어울리도록 Tailwind 클래스로 일부 스타일을 오버라이드합니다.
+    * 복잡한 상태 관리 로직과 컴포넌트 구조에 대해 상세한 주석을 달아주세요.
+```
+- **결과 및 수정사항**: Gemini CLI AI를 이용하여 여행 계획 페이지 생성
+- **학습 내용**: Gemini CLI 페이지 생성 명령어 프롬프트
+
+---
+
+
 
 
 

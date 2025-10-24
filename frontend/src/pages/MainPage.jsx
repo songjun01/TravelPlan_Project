@@ -64,7 +64,7 @@ const TravelPlanCard = ({ plan }) => (
  * 새로운 계획을 추가하는 버튼 역할을 하는 카드 컴포넌트
  */
 const AddNewPlanCard = () => (
-  <Link to="/editor" className="flex items-center justify-center bg-gray-50 p-6 rounded-lg border-2 border-dashed border-primary hover:bg-primary group transition-all duration-300 ease-in-out"> {/* 메인 색상 테두리 및 호버 효과 */}
+  <Link to="/create-plan" className="flex items-center justify-center bg-gray-50 p-6 rounded-lg border-2 border-dashed border-primary hover:bg-primary group transition-all duration-300 ease-in-out"> {/* 메인 색상 테두리 및 호버 효과 */}
     <div className="text-center">
       <span className="text-5xl text-primary group-hover:text-white transition-colors duration-300">+</span> {/* 메인 색상 아이콘 및 호버 효과 */}
     </div>

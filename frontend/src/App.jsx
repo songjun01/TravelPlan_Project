@@ -24,7 +24,7 @@ function App() {
         <Route path="/plan/:planId" element={<TravelDetailPage />} />
 
         {/* 새로운 계획을 생성하는 편집기 라우트 */}
-        <Route path="/editor" element={<PlanEditorPage />} />
+        <Route path="/create-plan" element={<PlanEditorPage />} />
 
         {/* 기존 계획을 수정하는 편집기 라우트 (동적 파라미터: planId) */}
         <Route path="/edit/:planId" element={<PlanEditorPage />} />
