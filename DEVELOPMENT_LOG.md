@@ -380,6 +380,66 @@
 
 ---
 
+- **작업 내용**: 메인 페이지 정렬기능 추가
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, `MainPage.jsx` (메인 페이지)에 여행 계획을 정렬하는 기능을 추가합니다.
+
+### 1. 수정할 파일
+* `frontend/src/pages/MainPage.jsx`
+
+### 2. 요구 사항
+
+1.  **`useMemo` 및 `useState` Import:**
+    * `react`에서 `useState`와 `useMemo`를 import 합니다.
+
+2.  **목업 데이터(Mock Data) 구조 확인:**
+    * `mockTravelPlans` (또는 유사한 이름의) 배열에 있는 각 객체가 정렬을 위한 표준화된 키를 가지고 있는지 확인하고, 없다면 수정해 주세요.
+    * **`startDate`:** '여행일정' 정렬을 위해 필요합니다. (예: `startDate: '2025-11-01'`)
+    * **`lastModified`:** '마지막 수정시간' 정렬을 위해 필요합니다. (예: `lastModified: '2025-10-24T14:30:00Z'`)
+    * `title`은 이미 있어야 합니다.
+
+3.  **정렬 상태(State) 추가:**
+    * 현재 정렬 순서를 저장하기 위한 `useState`를 추가합니다.
+    * `const [sortOrder, setSortOrder] = useState('modified_desc');`
+    * `'modified_desc'` (마지막 수정시간 최근순)를 기본값으로 설정합니다.
+
+4.  **정렬 UI (Select Dropdown) 추가:**
+    * 페이지 제목(예: "내 여행 계획")과 여행 계획 카드 그리드 **사이**에 정렬 옵션을 선택할 수 있는 `<select>` 드롭다운 메뉴를 추가합니다.
+    * 이 드롭다운을 감싸는 `div`를 추가하고, Tailwind CSS를 사용해 **오른쪽 정렬**(`flex justify-end`) 시켜주세요.
+    * `<select>` 요소의 스타일은 미니멀하게 적용합니다. (예: `border rounded-md px-3 py-2`)
+    * `<select>`의 `value`는 `sortOrder` 상태와 바인딩합니다.
+    * `onChange` 이벤트 핸들러를 추가하여, 옵션 선택 시 `setSortOrder`를 호출해 상태를 업데이트하도록 합니다.
+    * `<option>` 태그로 다음 정렬 옵션들을 추가합니다:
+        * `value="modified_desc"`: 마지막 수정시간 (최근순)
+        * `value="modified_asc"`: 마지막 수정시간 (과거순)
+        * `value="title_asc"`: 제목 (오름차순)
+        * `value="title_desc"`: 제목 (내림차순)
+        * `value="date_asc"`: 여행일정 (최근순)
+        * `value="date_desc"`: 여행일정 (과거순)
+
+5.  **정렬 로직 구현 (`useMemo`):**
+    * 원본 `mockTravelPlans` 배열을 `sortOrder` 상태에 따라 정렬한 `sortedPlans` 배열을 생성하기 위해 `useMemo`를 사용합니다.
+    * `useMemo`의 의존성 배열에는 `[mockTravelPlans, sortOrder]`를 포함합니다.
+    * 로직 내부:
+        * 원본 배열을 변형하지 않기 위해 `[...mockTravelPlans]`로 복사본을 만듭니다.
+        * `switch (sortOrder)` 문을 사용하여 각 케이스별로 `sort()` 메서드를 구현합니다.
+            * `modified_...`: `new Date(b.lastModified) - new Date(a.lastModified)` (desc)
+            * `date_...`: `new Date(a.startDate) - new Date(b.startDate)` (asc, 최근 다가오는 순)
+            * `title_...`: `a.title.localeCompare(b.title)` (asc)
+        * 정렬된 배열을 반환합니다.
+
+6.  **렌더링 업데이트:**
+    * 기존에 `mockTravelPlans.map(...)`을 사용하던 부분을 `sortedPlans.map(...)`으로 변경하여, 정렬된 리스트가 렌더링되도록 수정합니다.
+
+7.  **주석:**
+    * 새로 추가된 `useState`, `useMemo` 로직, 그리고 `<select>` UI 부분에 대해 상세한 주석을 달아주세요.
+```
+- **결과 및 수정사항**: Gemini CLI AI를 이용하여 메인 페이지에 정렬기능을 추가하였다.
+- **학습 내용**: Gemini CLI를 이용한 웹페이지 기능 추가
+
+---
+
 
 
 
