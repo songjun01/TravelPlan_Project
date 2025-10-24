@@ -27,6 +27,7 @@ function App() {
         <Route path="/create-plan" element={<PlanEditorPage />} />
 
         {/* 기존 계획을 수정하는 편집기 라우트 (동적 파라미터: planId) */}
+        {/* PlanEditorPage는 생성(create-plan)과 수정(edit/:planId) 모드 모두에 사용됩니다. */}
         <Route path="/edit/:planId" element={<PlanEditorPage />} />
       </Routes>
     </Router>

@@ -7,6 +7,7 @@
  * 2. (POST) '저장하기' 핸들러가 itinerary를 포함하여 POST(생성) API를 호출합니다.
  * 3. (Validation) '저장하기' 핸들러에 유효성 검사 로직을 추가합니다.
  * 4. (UI) 세부 일정(itinerary)에 '시간(time)' 필드를 추가하고 관련 핸들러를 수정합니다.
+ * 5. [수정] 🚨 '생성' 후 상세 페이지 이동 시, 백엔드 응답에서 실제 MongoDB '_id'를 사용합니다.
  */
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
@@ -57,7 +58,7 @@ function PlanEditorPage() {
   }, [plan.startDate, plan.endDate, isEditMode, loading]); // 의존성 배열에 isEditMode, loading 추가
 
 
-  // [수정] '수정 모드'일 때, API에서 기존 데이터를 불러옵니다.
+  // '수정 모드'일 때, API에서 기존 데이터를 불러옵니다.
   useEffect(() => {
     if (isEditMode) {
       setLoading(true);
@@ -70,7 +71,7 @@ function PlanEditorPage() {
             title: data.title,
             region: data.location, // 백엔드 'location'을 프론트 'region'으로 매핑
             startDate: new Date(data.startDate), // 날짜 문자열을 Date 객체로
-            endDate: new Date(data.endDate),
+            endDate: new Date(data.endDate),     // 날짜 문자열을 Date 객체로
             // DB에서 받은 itinerary의 날짜 문자열도 Date 객체로 변환
             itinerary: data.itinerary.map(day => ({
               ...day,
@@ -116,7 +117,7 @@ function PlanEditorPage() {
     setPlan(prevPlan => ({ ...prevPlan, itinerary: newItinerary }));
   };
 
-  // [수정] 🚨 새로운 세부 일정 항목(이벤트)을 추가 (time 필드 기본값 '09:00' 추가)
+  // 새로운 세부 일정 항목(이벤트)을 추가 (time 필드 기본값 추가)
   const addItineraryItem = (dayIndex, type) => {
     const newItem = type === 'visit'
       ? { type: 'visit', time: '09:00', place: '', address: '', stayTime: '' }
@@ -134,9 +135,9 @@ function PlanEditorPage() {
     setPlan(prevPlan => ({ ...prevPlan, itinerary: newItinerary }));
   };
 
-  // [수정] 🚨 '저장하기' 버튼 클릭 핸들러 (유효성 검사 및 수정 로직 추가)
+  // '저장하기' 버튼 클릭 핸들러 (유효성 검사, 수정/생성 API 호출, 상세 페이지 이동)
   const handleSave = async () => {
-    // 1. [추가] 🚨 사용자 입력 유효성 검사
+    // 1. 사용자 입력 유효성 검사
     if (!plan.title.trim() || !plan.region.trim()) {
       alert('여행 제목과 지역은 필수 입력 항목입니다.');
       return; // 저장 로직 중단
@@ -148,22 +149,36 @@ function PlanEditorPage() {
       location: plan.region, // 'region'을 'location'으로 매핑
       startDate: plan.startDate,
       endDate: plan.endDate,
-      itinerary: plan.itinerary // 🚨 세부 일정(itinerary) 포함
+      itinerary: plan.itinerary // 세부 일정(itinerary) 포함
     };
 
     // 3. API 호출 (수정 / 생성 분기)
     try {
+      let response; // API 응답을 저장할 변수
       if (isEditMode) {
         // [수정 모드] PATCH API 호출
-        await axios.patch(`/api/travel-plans/${planId}`, dataToSend);
+        response = await axios.patch(`/api/travel-plans/${planId}`, dataToSend); //
         alert('계획이 성공적으로 수정되었습니다!');
+        // 4. 저장이 성공하면 수정된 계획의 상세 페이지로 이동
+        navigate(`/plan/${planId}`); // 기존 planId 사용
       } else {
         // [생성 모드] POST API 호출
-        await axios.post('/api/travel-plans', dataToSend);
+        response = await axios.post('/api/travel-plans', dataToSend); //
         alert('새로운 여행 계획이 저장되었습니다!');
+        
+        // [수정] 🚨 백엔드 응답에서 MongoDB가 생성한 '_id'를 가져옵니다.
+        const newPlanId = response.data._id; // response.data.id -> response.data._id
+        
+        // 4. 저장이 성공하면 새로 생성된 계획의 상세 페이지로 이동
+        if (newPlanId) {
+          navigate(`/plan/${newPlanId}`); // 실제 생성된 _id 사용
+        } else {
+          // 혹시 모를 예외 처리: _id가 응답에 없는 경우 (이론상 발생하면 안 됨)
+          console.error('API 응답에서 새 계획 ID를 찾을 수 없습니다.', response.data);
+          alert('저장은 되었으나 상세 페이지로 이동할 수 없습니다. 메인 페이지로 이동합니다.');
+          navigate('/'); // 메인 페이지로 대신 이동
+        }
       }
-      // 4. 저장이 성공하면 메인 페이지로 이동
-      navigate('/');
     } catch (error) {
       console.error('계획 저장 중 오류 발생:', error);
       alert(`저장 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
@@ -176,7 +191,7 @@ function PlanEditorPage() {
     return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
   };
 
-  // [추가] 🚨 수정 모드에서 데이터 로딩 중일 때 UI
+  // 수정 모드에서 데이터 로딩 중일 때 UI
   if (isEditMode && loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8 flex justify-center items-center">
@@ -187,6 +202,7 @@ function PlanEditorPage() {
     );
   }
 
+  // JSX 렌더링 시작
   return (
     // 1. 페이지 전체 배경색과 패딩
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -258,7 +274,7 @@ function PlanEditorPage() {
             />
           </div>
 
-          {/* 3d. 폼 섹션 (세부 일정) - [수정] 🚨 time 필드 input 추가 및 grid 레이아웃 조정 */}
+          {/* 3d. 폼 섹션 (세부 일정) - time 필드 input 추가 및 grid 레이아웃 조정 */}
           <div className="p-6 border-t">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">세부 일정</h2>
             {plan.itinerary.map((day, dayIndex) => (
@@ -269,6 +285,7 @@ function PlanEditorPage() {
                 
                 {day.events.map((event, eventIndex) => (
                   <div key={eventIndex} className="bg-gray-50 p-4 rounded-md mb-4 relative">
+                    {/* 이벤트 삭제 버튼 */}
                     <button 
                       onClick={() => removeItineraryItem(dayIndex, eventIndex)}
                       className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors"
@@ -277,8 +294,9 @@ function PlanEditorPage() {
                       <FaTrash />
                     </button>
 
+                    {/* 이벤트 타입에 따른 입력 폼 렌더링 */}
                     {event.type === 'visit' ? (
-                      // [수정] 🚨 방문(visit) 폼: time 필드 추가, grid-cols-2 md:grid-cols-4로 변경
+                      // 방문(visit) 폼: time 필드 추가, grid-cols-2 md:grid-cols-4
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         <input type="time" name="time" value={event.time || '09:00'} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} className="w-full p-2 border rounded" />
                         <input type="text" name="place" value={event.place} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="방문 장소" className="w-full p-2 border rounded" />
@@ -286,7 +304,7 @@ function PlanEditorPage() {
                         <input type="text" name="stayTime" value={event.stayTime} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="체류 시간 (예: 2시간)" className="w-full p-2 border rounded" />
                       </div>
                     ) : (
-                      // [수정] 🚨 이동(move) 폼: time 필드 추가, grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5로 변경 (공간 확보)
+                      // 이동(move) 폼: time 필드 추가, grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <input type="time" name="time" value={event.time || '10:00'} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} className="w-full p-2 border rounded" />
                         <input type="text" name="transport" value={event.transport} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="교통수단 (예: 택시)" className="w-full p-2 border rounded" />
@@ -298,6 +316,7 @@ function PlanEditorPage() {
                   </div>
                 ))}
 
+                {/* 방문/이동 추가 버튼 */}
                 <div className="flex space-x-4">
                   <button onClick={() => addItineraryItem(dayIndex, 'visit')} className="flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors">
                     <FaPlus className="mr-2" /> 방문 추가
@@ -310,7 +329,7 @@ function PlanEditorPage() {
             ))}
           </div>
 
-          {/* 3e. 카드 푸터 (저장 버튼) - [수정] 🚨 유효성 검사가 추가된 handleSave 연결 */}
+          {/* 3e. 카드 푸터 (저장 버튼) - 유효성 검사가 추가된 handleSave 연결 */}
           <div className="p-6 border-t text-right">
             <button
               onClick={handleSave}

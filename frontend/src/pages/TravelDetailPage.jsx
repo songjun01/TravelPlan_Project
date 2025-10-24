@@ -48,24 +48,37 @@ function TravelDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // planId가 변경될 때마다 백엔드 API를 호출합니다.
+  // 5. 데이터 로드 로직 (`useEffect`) 추가:
+  // 컴포넌트 마운트 시 또는 planId가 변경될 때마다 API에서 데이터를 가져옵니다.
   useEffect(() => {
-    if (!planId) return;
+    // planId가 없으면 데이터를 가져올 필요가 없습니다. (예: 페이지 로드 초기)
+    if (!planId) {
+      setLoading(false); // planId가 없으므로 로딩 완료 처리
+      setError('유효한 여행 계획 ID가 없습니다.');
+      return;
+    }
 
-    setLoading(true);
-    setError(null);
+    const fetchPlanData = async () => {
+      setLoading(true); // 데이터 로딩 시작
+      setError(null);   // 에러 상태 초기화
 
-    axios.get(`/api/travel-plans/${planId}`) // 백엔드 상세 조회 API 호출
-      .then(response => {
-        setPlan(response.data); // 성공 시 상태에 저장
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('데이터 로딩 오류:', err);
-        setError('여행 계획을 찾을 수 없습니다.');
-        setLoading(false);
-      });
-  }, [planId]); // planId가 바뀔 때마다 재실행
+      try {
+        // 백엔드 API에 GET 요청을 보내 특정 planId의 데이터를 가져옵니다.
+        const response = await axios.get(`/api/travel-plans/${planId}`);
+        
+        // 응답이 성공적이면 plan 상태를 업데이트합니다.
+        setPlan(response.data);
+      } catch (err) {
+        console.error('여행 계획 데이터 로딩 오류:', err);
+        // 에러 발생 시 에러 상태를 설정합니다.
+        setError('여행 계획을 찾을 수 없거나 데이터를 불러오는 데 실패했습니다.');
+      } finally {
+        setLoading(false); // 로딩 완료
+      }
+    };
+
+    fetchPlanData(); // 데이터 가져오는 함수 호출
+  }, [planId]); // planId가 변경될 때마다 이 훅을 재실행합니다.
 
   // 로딩 및 에러 상태에 따른 UI 처리
   if (loading) {

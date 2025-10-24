@@ -450,6 +450,139 @@
 
 ---
 
+- **작업 내용**: 계획 수정/생성 페이지에서 저장 시 여행 상세 페이지로 이동하게 수정
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, '여행 계획 생성/수정 페이지'(`PlanEditorPage.jsx`)에서 "저장하기" 버튼을 눌렀을 때의 동작을 변경합니다.
+
+**현재:** 저장 후 메인 페이지(`/`)로 이동합니다.
+**목표:** 저장 후 방금 저장한/수정한 계획의 **상세 페이지**(`/plan/:planId`)로 이동합니다.
+
+### 1. `frontend/src/App.jsx` 파일 수정
+
+`PlanEditorPage`가 '수정' 모드일 때의 라우트가 필요합니다. (이전에 `/create-plan`만 추가했을 수 있습니다.)
+
+1.  `PlanEditorPage`를 import 했는지 확인합니다.
+2.  `<Routes>` 내부에 다음 라우트를 추가하거나 확인합니다.
+    * `<Route path="/edit/:planId" element={<PlanEditorPage />} />`
+    * (기존의 `<Route path="/create-plan" element={<PlanEditorPage />} />`는 그대로 둡니다.)
+3.  주석을 추가하여 '생성'과 '수정'이 같은 컴포넌트를 공유함을 명시합니다.
+
+### 2. `frontend/src/pages/PlanEditorPage.jsx` 파일 수정
+
+1.  **필요한 훅(Hook) Import:**
+    * `react-router-dom`에서 `useNavigate`와 `useParams`를 import 합니다.
+    * 예: `import { useNavigate, useParams } from 'react-router-dom';`
+
+2.  **훅 초기화:**
+    * 컴포넌트 최상단에 `useNavigate`와 `useParams`를 초기화합니다.
+    * `const navigate = useNavigate();`
+    * `const { planId } = useParams();` // URL에서 :planId 값을 가져옵니다.
+
+3.  **"저장하기" 버튼 핸들러 수정:**
+    * "저장하기" 버튼의 `onClick`에 연결된 함수(예: `handleSave`)를 찾습니다.
+    * 이 함수 내부의 맨 마지막에 있는 기존 `Maps('/')` (메인 페이지 이동) 코드를 수정합니다.
+    * **로직 변경:**
+        * **(수정 모드일 때):** `planId`가 존재한다면(즉, `/edit/:planId` 경로로 접근했다면), 저장 로직이 끝난 후 `Maps(`/plan/${planId}`);`를 호출합니다.
+        * **(생성 모드일 때):** `planId`가 `undefined`라면(즉, `/create-plan` 경로로 접근했다면), (목업) 저장 로직이 새 ID를 생성했다고 가정합니다.
+            * `const newMockId = 'mock-id-' + Date.now();` // 새 ID 생성 시뮬레이션
+            * `Maps(`/plan/${newMockId}`);` // 생성된 새 ID의 상세 페이지로 이동
+    * **상세한 주석:** `planId`의 존재 여부로 '생성'과 '수정' 모드를 구분하고, 그에 따라 다른 ID로 상세 페이지에 리디렉션하는 로직임을 주석으로 상세히 설명해 주세요.
+```
+- **결과 및 수정사항**: 계획을 수정했을 때는 여행 상세 페이지로 이동하지만, 새로 생성을 했을때는 '여행 계획을 찾을 수 없습니다'라는 글이 나오며 정상적으로 동작하지 않음을 확인.
+- **학습 내용**: Gemini CLI를 활용한 웹페이지 기능 수정
+
+---
+
+- **작업 내용**: 여행 추가 후 추가한 여행 상세 페이지로 이동하는 작업 2차 시도
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, '새 계획 생성' 후 리디렉션 오류를 **실제 MongoDB 데이터베이스 아키텍처**에 맞게 수정합니다. (이전의 'location.state' 방식은 사용하지 않습니다.)
+
+**문제:** '계획 생성' 페이지가 '상세 페이지'로 이동할 때, 상세 페이지가 MongoDB에서 데이터를 가져오지 않아 "찾을 수 없음" 오류가 발생합니다.
+**해결:** '생성' 페이지는 API 호출로 새 ID를 받고, '상세' 페이지는 API 호출로 데이터를 직접 로드하도록 수정합니다.
+
+---
+
+### 1. `frontend/src/pages/PlanEditorPage.jsx` 파일 수정 (데이터 저장 및 리디렉션)
+
+1.  **`useNavigate`, `useParams` Import:** `react-router-dom`에서 `useNavigate`와 `useParams`를 import 했는지 확인합니다.
+2.  **`handleSave` (저장 핸들러) 함수 수정:**
+    * "저장하기" 버튼에 연결된 `handleSave` 함수를 `async` 함수로 변경합니다.
+    * **(a) '생성' 모드 로직 (planId가 없을 때):**
+        * `planId`가 없는 `if` 블록을 찾습니다.
+        * (기존 로직 삭제)
+        * `try...catch` 블록으로 API 호출을 감쌉니다.
+        * 백엔드 API에 `POST` 요청을 보내 새 계획을 생성합니다. (API 엔드포인트는 예시입니다. `/api/plans`)
+            * `const response = await fetch('/api/plans', {`
+            * `  method: 'POST',`
+            * `  headers: { 'Content-Type': 'application/json' },`
+            * `  body: JSON.stringify(plan) // 'plan'은 현재 컴포넌트의 useState 상태`
+            * `});`
+        * `if (!response.ok)` 에러 처리를 추가합니다.
+        * 응답에서 MongoDB가 생성한 **새 계획 데이터(와 `_id`)**를 JSON으로 받습니다.
+            * `const newPlan = await response.json();`
+        * 이 `newPlan._id`를 사용하여 **상세 페이지로 이동**합니다.
+            * `Maps(`/plan/${newPlan._id}`);`
+    * **(b) '수정' 모드 로직 (planId가 있을 때):**
+        * `planId`가 있는 `else` 블록을 찾습니다.
+        * `PUT` (또는 `PATCH`) 요청을 백엔드 API로 보냅니다.
+            * `await fetch(`/api/plans/${planId}`, { ... body: JSON.stringify(plan) ... });`
+        * 저장 후 상세 페이지로 이동합니다.
+            * `Maps(`/plan/${planId}`);`
+    * **주석:** API 호출, 응답에서 `_id` 추출, `Maps` 경로 설정에 대해 상세한 주석을 달아주세요.
+
+---
+
+### 2. `frontend/src/pages/TravelDetailPage.jsx` 파일 수정 (데이터 로드)
+
+1.  **필요한 훅 Import:**
+    * `react`에서 `useState`, `useEffect`를 import 합니다.
+    * `react-router-dom`에서 `useParams`를 import 합니다.
+    * (중요) `useLocation` 및 `location.state`를 사용한 로직은 **모두 삭제**합니다.
+2.  **컴포넌트 상태(State) 추가:**
+    * `const [plan, setPlan] = useState(null);`
+    * `const [loading, setLoading] = useState(true);`
+    * `const [error, setError] = useState(null);`
+3.  **URL 파라미터(planId) 가져오기:**
+    * `const { planId } = useParams();`
+4.  **데이터 로드 로직 (`useEffect`) 추가:**
+    * 컴포넌트 마운트 시 `planId`를 기반으로 API에서 데이터를 가져오도록 `useEffect`를 추가합니다.
+    * `useEffect(() => { ... }, [planId]);`
+    * `useEffect` 내부에 `async` 함수(예: `fetchPlanData`)를 정의하고 즉시 호출합니다.
+    * `try...catch` 블록을 사용합니다.
+    * `setLoading(true);`
+    * 백엔드 API에 `GET` 요청을 보냅니다.
+        * `const response = await fetch(`/api/plans/${planId}`);`
+    * 응답이 `ok`가 아니면 (예: 404 Not Found) `setError`를 호출하고 `setLoading(false)` 후 `return` 합니다.
+    * 응답이 `ok`이면, JSON 데이터를 `setPlan`에 저장합니다.
+        * `setPlan(await response.json());`
+    * `catch` 블록에서 `setError`를 호출합니다.
+    * `finally` 블록에서 `setLoading(false)`를 호출합니다.
+5.  **로딩 및 에러 처리 UI:**
+    * JSX의 `return` 문 상단에 로딩 및 에러 상태를 렌더링합니다.
+    * `if (loading) { return <div>로딩 중...</div>; }`
+    * `if (error || !plan) { return <div>여행 계획을 찾을 수 없습니다.</div>; }`
+6.  **기존 렌더링 로직:**
+    * 위 `if`문들 통과 후, 기존 JSX 렌더링 로직이 `plan` 상태를 사용하여 정상적으로 렌더링되도록 둡니다.
+    * (기존 목업 데이터 관련 로직은 모두 삭제합니다.)
+7.  **주석:** `useEffect` 훅, API fetch 로직, 로딩/에러 상태 처리에 대해 상세한 주석을 달아주세요.
+```
+- **결과 및 수정사항**: '여행 계획을 찾을 수 없습니다'라는 글이 나오며 정상적으로 동작하지 않음을 확인.
+- **학습 내용**: Gemini CLI를 활용한 웹페이지 기능 수정
+
+---
+
+- **작업 내용**: 여행 추가 후 추가한 여행 상세 페이지로 이동하는 작업 3차 시도
+- **Gemini CLI 사용 프롬프트**:
+```
+새로운 계획을 추가하고 저장하면 계속 url이 '/plan/mock-id-'와 같은 형식으로 생성되면서 '여행 계획을 찾을 수 없거나 데이터를 불러오는 데 실패했습니다.' 이런 문구가 나오며 정상작동을 하지 않아. 새로운 계획을 추가하면 추가한 여행 세부 페이지로 이동하게 수정해줘
+```
+- **결과 및 수정사항**: 구현 성공 및 정상 작동 확인
+- **학습 내용**: Gemini AI를 활용한 웹페이지 기능 수정
+
+---
+
 
 
 
@@ -457,6 +590,10 @@
 1. **문제**: 목업데이터 대신 mongoDB에 연결하고 계획 작성 후 저장하기를 누르면 "저장 중 오류가 발생했습니다: Request failed with status code 500" 오류가 발생하는 것을 확인.
    - **해결**: 시스템 환경 내 mongoDB가 제대로 설치되어있지 않아 mongoDB 재설치 후 --fork 옵션으로 백그라운드에서 mongoDB를 실행시켜 해결
    - **AI 활용**: Gemini AI에 우분투 환경에 mongoDB 설치 방법 및 실행 방법 질문
+
+2. **문제**: 여행 계획을 생성 후 저장하기를 누르면 '여행 계획을 찾을 수 없습니다'라는 글이 나오며 정상적으로 동작하지 않음을 확인.
+   - **해결**: 새 계획 생성 후 백엔드로부터 받은 응답 데이터에서 MongoDB가 생성한 실제 _id를 가져오는 것이 아닌 존재하지 않는 id필드를 참조하려 했다는것을 발견하여 'frontend/src/pages/PlanEditorPage.jsx'파일의 handleSave 함수의 '생성 모드' 로직에서 response.data.id를 response.data._id로 수정.
+   - **AI 활용**: Gemini AI에 문제 해결 방법 질문
 
 ---
 
