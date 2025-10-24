@@ -1,20 +1,26 @@
+// frontend/src/pages/PlanEditorPage.jsx
+
 /**
  * src/pages/PlanEditorPage.jsx
- * 
- * 새로운 여행 계획을 생성하거나 기존 계획을 수정하는 페이지입니다.
- * 사용자는 이 페이지에서 여행의 제목, 지역, 기간을 설정하고,
- * 날짜별로 방문 장소나 이동 경로 등 세부 일정을 추가하고 편집할 수 있습니다.
+ * [수정] 
+ * 1. (GET/PATCH) '수정 모드'일 때, API에서 기존 데이터를 불러오고, 수정 API를 호출합니다.
+ * 2. (POST) '저장하기' 핸들러가 itinerary를 포함하여 POST(생성) API를 호출합니다.
+ * 3. (Validation) '저장하기' 핸들러에 유효성 검사 로직을 추가합니다.
+ * 4. (UI) 세부 일정(itinerary)에 '시간(time)' 필드를 추가하고 관련 핸들러를 수정합니다.
  */
 import React, { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { FaArrowLeft, FaTrash, FaPlus } from 'react-icons/fa';
 import { differenceInDays, addDays } from 'date-fns';
+import axios from 'axios';
 
 function PlanEditorPage() {
   const { planId } = useParams(); // URL에서 planId를 가져옵니다 (수정 모드용)
   const isEditMode = Boolean(planId); // planId가 있으면 수정 모드
+  const navigate = useNavigate(); // 페이지 이동 훅
+  const [loading, setLoading] = useState(false); // 로딩 상태
 
   // 여행 계획 전체 데이터를 관리하는 상태
   const [plan, setPlan] = useState({
@@ -27,11 +33,11 @@ function PlanEditorPage() {
 
   /**
    * 날짜 범위가 변경될 때마다 itinerary 배열을 자동으로 업데이트합니다.
-   * - 시작일과 종료일 사이의 기간을 계산합니다.
-   * - 각 날짜에 해당하는 객체를 itinerary 배열에 생성합니다.
-   * - 기존에 있던 이벤트는 최대한 유지합니다.
+   * (단, 수정 모드에서 데이터 로딩 중에는 이 로직이 실행되는 것을 방지)
    */
   useEffect(() => {
+    if (isEditMode && loading) return; 
+
     const newItinerary = [];
     if (plan.startDate && plan.endDate && plan.startDate <= plan.endDate) {
       const days = differenceInDays(plan.endDate, plan.startDate) + 1;
@@ -48,7 +54,39 @@ function PlanEditorPage() {
       }
     }
     setPlan(p => ({ ...p, itinerary: newItinerary }));
-  }, [plan.startDate, plan.endDate]);
+  }, [plan.startDate, plan.endDate, isEditMode, loading]); // 의존성 배열에 isEditMode, loading 추가
+
+
+  // [수정] '수정 모드'일 때, API에서 기존 데이터를 불러옵니다.
+  useEffect(() => {
+    if (isEditMode) {
+      setLoading(true);
+      axios.get(`/api/travel-plans/${planId}`)
+        .then(response => {
+          const data = response.data;
+          
+          // DB에서 받은 데이터를 프론트엔드 상태(plan)에 맞게 설정합니다.
+          setPlan({
+            title: data.title,
+            region: data.location, // 백엔드 'location'을 프론트 'region'으로 매핑
+            startDate: new Date(data.startDate), // 날짜 문자열을 Date 객체로
+            endDate: new Date(data.endDate),
+            // DB에서 받은 itinerary의 날짜 문자열도 Date 객체로 변환
+            itinerary: data.itinerary.map(day => ({
+              ...day,
+              date: new Date(day.date)
+            })) || []
+          });
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('수정할 계획 로딩 오류:', err);
+          alert('데이터를 불러오는데 실패했습니다.');
+          setLoading(false);
+          navigate('/'); // 오류 발생 시 메인 페이지로 이동
+        });
+    }
+  }, [isEditMode, planId, navigate]);
 
 
   // 기본 정보(제목, 지역) 입력 필드 변경 핸들러
@@ -78,11 +116,11 @@ function PlanEditorPage() {
     setPlan(prevPlan => ({ ...prevPlan, itinerary: newItinerary }));
   };
 
-  // 새로운 세부 일정 항목(이벤트)을 추가하는 핸들ler
+  // [수정] 🚨 새로운 세부 일정 항목(이벤트)을 추가 (time 필드 기본값 '09:00' 추가)
   const addItineraryItem = (dayIndex, type) => {
     const newItem = type === 'visit'
-      ? { type: 'visit', place: '', address: '', stayTime: '' }
-      : { type: 'move', transport: '', start: '', end: '', duration: '' };
+      ? { type: 'visit', time: '09:00', place: '', address: '', stayTime: '' }
+      : { type: 'move', time: '10:00', transport: '', start: '', end: '', duration: '' };
     
     const newItinerary = [...plan.itinerary];
     newItinerary[dayIndex].events.push(newItem);
@@ -96,11 +134,40 @@ function PlanEditorPage() {
     setPlan(prevPlan => ({ ...prevPlan, itinerary: newItinerary }));
   };
 
-  // '저장하기' 버튼 클릭 핸들러 (현재는 콘솔에 데이터 출력)
-  const handleSave = () => {
-    // 나중에 이 부분에 백엔드 API 호출 로직을 추가합니다.
-    console.log('Saving plan:', plan);
-    alert('계획이 저장되었습니다! (콘솔 확인)');
+  // [수정] 🚨 '저장하기' 버튼 클릭 핸들러 (유효성 검사 및 수정 로직 추가)
+  const handleSave = async () => {
+    // 1. [추가] 🚨 사용자 입력 유효성 검사
+    if (!plan.title.trim() || !plan.region.trim()) {
+      alert('여행 제목과 지역은 필수 입력 항목입니다.');
+      return; // 저장 로직 중단
+    }
+
+    // 2. 프론트엔드 상태(plan)를 백엔드 스키마에 맞게 변환
+    const dataToSend = {
+      title: plan.title,
+      location: plan.region, // 'region'을 'location'으로 매핑
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      itinerary: plan.itinerary // 🚨 세부 일정(itinerary) 포함
+    };
+
+    // 3. API 호출 (수정 / 생성 분기)
+    try {
+      if (isEditMode) {
+        // [수정 모드] PATCH API 호출
+        await axios.patch(`/api/travel-plans/${planId}`, dataToSend);
+        alert('계획이 성공적으로 수정되었습니다!');
+      } else {
+        // [생성 모드] POST API 호출
+        await axios.post('/api/travel-plans', dataToSend);
+        alert('새로운 여행 계획이 저장되었습니다!');
+      }
+      // 4. 저장이 성공하면 메인 페이지로 이동
+      navigate('/');
+    } catch (error) {
+      console.error('계획 저장 중 오류 발생:', error);
+      alert(`저장 중 오류가 발생했습니다: ${error.response?.data?.message || error.message}`);
+    }
   };
 
   // 날짜를 'YYYY.MM.DD' 형식의 문자열로 포맷하는 함수
@@ -109,10 +176,21 @@ function PlanEditorPage() {
     return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
   };
 
+  // [추가] 🚨 수정 모드에서 데이터 로딩 중일 때 UI
+  if (isEditMode && loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8 flex justify-center items-center">
+        <h1 className="text-2xl font-semibold text-gray-700">
+          기존 계획을 불러오는 중입니다...
+        </h1>
+      </div>
+    );
+  }
+
   return (
-    // 1. 페이지 전체 배경색과 패딩을 적용합니다.
+    // 1. 페이지 전체 배경색과 패딩
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      {/* 2. 콘텐츠를 중앙에 배치하기 위한 max-width 및 mx-auto 래퍼입니다. */}
+      {/* 2. 콘텐츠 중앙 정렬 래퍼 */}
       <div className="max-w-4xl mx-auto">
         {/* 페이지 헤더: 뒤로가기 버튼 */}
         <div className="mb-4">
@@ -125,7 +203,7 @@ function PlanEditorPage() {
           </Link>
         </div>
 
-        {/* 3. 메인 폼 카드: 모든 입력 필드와 버튼을 포함하는 컨테이너입니다. */}
+        {/* 3. 메인 폼 카드 */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {/* 3a. 카드 헤더 */}
           <div className="p-6 border-b">
@@ -180,7 +258,7 @@ function PlanEditorPage() {
             />
           </div>
 
-          {/* 3d. 폼 섹션 (세부 일정) */}
+          {/* 3d. 폼 섹션 (세부 일정) - [수정] 🚨 time 필드 input 추가 및 grid 레이아웃 조정 */}
           <div className="p-6 border-t">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">세부 일정</h2>
             {plan.itinerary.map((day, dayIndex) => (
@@ -200,13 +278,17 @@ function PlanEditorPage() {
                     </button>
 
                     {event.type === 'visit' ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      // [수정] 🚨 방문(visit) 폼: time 필드 추가, grid-cols-2 md:grid-cols-4로 변경
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <input type="time" name="time" value={event.time || '09:00'} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} className="w-full p-2 border rounded" />
                         <input type="text" name="place" value={event.place} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="방문 장소" className="w-full p-2 border rounded" />
                         <input type="text" name="address" value={event.address} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="주소" className="w-full p-2 border rounded" />
                         <input type="text" name="stayTime" value={event.stayTime} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="체류 시간 (예: 2시간)" className="w-full p-2 border rounded" />
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                      // [수정] 🚨 이동(move) 폼: time 필드 추가, grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5로 변경 (공간 확보)
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <input type="time" name="time" value={event.time || '10:00'} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} className="w-full p-2 border rounded" />
                         <input type="text" name="transport" value={event.transport} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="교통수단 (예: 택시)" className="w-full p-2 border rounded" />
                         <input type="text" name="start" value={event.start} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="출발 장소" className="w-full p-2 border rounded" />
                         <input type="text" name="end" value={event.end} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="도착 장소" className="w-full p-2 border rounded" />
@@ -228,7 +310,7 @@ function PlanEditorPage() {
             ))}
           </div>
 
-          {/* 3e. 카드 푸터 (저장 버튼) */}
+          {/* 3e. 카드 푸터 (저장 버튼) - [수정] 🚨 유효성 검사가 추가된 handleSave 연결 */}
           <div className="p-6 border-t text-right">
             <button
               onClick={handleSave}

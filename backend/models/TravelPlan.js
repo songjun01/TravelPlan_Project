@@ -1,22 +1,47 @@
+// backend/models/TravelPlan.js
+
 /**
  * models/TravelPlan.js
- * 이 파일은 Mongoose를 사용하여 MongoDB에 저장될 여행 계획(TravelPlan) 데이터의 스키마를 정의합니다.
+ * [수정] 세부 일정(itinerary)을 저장하기 위해 하위 스키마(sub-schema)를 추가하고, 'time' 필드를 추가합니다.
  */
 
 const mongoose = require('mongoose');
-
-// Mongoose의 Schema 객체를 가져옵니다.
 const Schema = mongoose.Schema;
 
-// 여행 계획의 데이터 구조를 정의하는 스키마를 생성합니다.
+// 1. 세부 이벤트 스키마 (방문 또는 이동)
+// PlanEditorPage.jsx의 state 구조를 따릅니다.
+const eventSchema = new Schema({
+  type: { type: String, required: true, enum: ['visit', 'move'] },
+  
+  // [추가] 🚨 일정 시작 시간 (예: '10:00')
+  time: { type: String, trim: true }, 
+
+  // 'visit' 유형 필드
+  place: { type: String, trim: true },
+  address: { type: String, trim: true },
+  stayTime: { type: String, trim: true },
+  // 'move' 유형 필드
+  transport: { type: String, trim: true },
+  start: { type: String, trim: true }, // 'from' 대신 'start' 사용 (PlanEditorPage 기준)
+  end: { type: String, trim: true },   // 'to' 대신 'end' 사용 (PlanEditorPage 기준)
+  duration: { type: String, trim: true },
+}, { _id: false }); // sub-document는 자체 _id가 필요 없습니다.
+
+// 2. 날짜별 일정 스키마
+const itineraryDaySchema = new Schema({
+  date: { type: Date, required: true },
+  events: [eventSchema] // 위에서 정의한 eventSchema의 배열
+}, { _id: false });
+
+// 3. 메인 여행 계획 스키마 (기존 스키마 수정)
 const travelPlanSchema = new Schema({
   // 여행 계획의 제목
   title: {
-    type: String, // 데이터 타입은 문자열
-    required: true, // 필수 항목
-    trim: true      // 문자열 앞뒤의 공백 제거
+    type: String,
+    required: true,
+    trim: true
   },
-  // 여행 지역
+  // 여행 지역 (기존 location)
   location: {
     type: String,
     required: true,
@@ -24,7 +49,7 @@ const travelPlanSchema = new Schema({
   },
   // 여행 시작일
   startDate: {
-    type: Date, // 데이터 타입은 날짜
+    type: Date,
     required: true
   },
   // 여행 종료일
@@ -32,17 +57,23 @@ const travelPlanSchema = new Schema({
     type: Date,
     required: true
   },
-  // 마지막 수정 날짜
+  
+  // [추가] 4. itinerary 필드를 날짜별 일정 배열로 정의합니다.
+  itinerary: {
+    type: [itineraryDaySchema],
+    default: [] // 기본값은 빈 배열
+  },
+
+  // 마지막 수정 날짜 (기존과 동일)
   lastModified: {
     type: Date,
-    default: Date.now // 기본값으로 현재 날짜/시간을 설정
+    default: Date.now
   }
 }, {
-  // 타임스탬프 옵션: createdAt과 updatedAt 필드를 자동으로 추가합니다.
-  timestamps: true
+  timestamps: true // createdAt, updatedAt 자동 추가
 });
 
-// 스키마가 변경될 때마다 마지막 수정 날짜(lastModified)를 업데이트하는 미들웨어
+// 스키마가 변경될 때마다 마지막 수정 날짜(lastModified)를 업데이트하는 미들웨어 (기존과 동일)
 travelPlanSchema.pre('save', function(next) {
   this.lastModified = Date.now();
   next();
