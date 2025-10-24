@@ -110,123 +110,134 @@ function PlanEditorPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
-      {/* 페이지 헤더: 뒤로가기 버튼과 제목 */}
-      <div className="flex items-center mb-8">
-        <Link to="/" className="text-gray-500 hover:text-primary transition-colors duration-300">
-          <FaArrowLeft size={24} />
-        </Link>
-        <h1 className="text-3xl font-bold text-primary ml-4">
-          {isEditMode ? '여행 계획 수정하기' : '새로운 여행 계획 만들기'}
-        </h1>
-      </div>
-
-      {/* 기본 정보 입력 폼 */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">기본 정보</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 여행 제목 입력 */}
-          <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">여행 제목</label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              value={plan.title}
-              onChange={handleBasicInfoChange}
-              placeholder="예: 제주도 힐링 여행"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-            />
-          </div>
-          {/* 여행 지역 입력 */}
-          <div>
-            <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-1">여행 지역</label>
-            <input
-              type="text"
-              id="region"
-              name="region"
-              value={plan.region}
-              onChange={handleBasicInfoChange}
-              placeholder="예: 제주도, 대한민국"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-            />
-          </div>
+    // 1. 페이지 전체 배경색과 패딩을 적용합니다.
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      {/* 2. 콘텐츠를 중앙에 배치하기 위한 max-width 및 mx-auto 래퍼입니다. */}
+      <div className="max-w-4xl mx-auto">
+        {/* 페이지 헤더: 뒤로가기 버튼 */}
+        <div className="mb-4">
+          <Link
+            to="/"
+            className="inline-block p-2 rounded-full hover:bg-gray-200 transition-colors"
+            title="메인으로 돌아가기"
+          >
+            <FaArrowLeft size={24} className="text-gray-700" />
+          </Link>
         </div>
-        {/* 여행 날짜 선택 */}
-        <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">여행 날짜</label>
-          <DatePicker
-            selected={plan.startDate}
-            onChange={handleDateChange}
-            startDate={plan.startDate}
-            endDate={plan.endDate}
-            selectsRange
-            inline
-            className="w-full"
-            calendarClassName="border-none shadow-sm"
-          />
-        </div>
-      </div>
 
-      {/* 세부 일정 편집기 */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">세부 일정</h2>
-        {plan.itinerary.map((day, dayIndex) => (
-          <div key={dayIndex} className="mb-6 border-t pt-4">
-            <h3 className="text-lg font-bold text-primary mb-4">
-              Day {dayIndex + 1} - {formatDate(day.date)}
-            </h3>
-            
-            {/* 날짜별 이벤트 목록 */}
-            {day.events.map((event, eventIndex) => (
-              <div key={eventIndex} className="bg-gray-50 p-4 rounded-md mb-4 relative">
-                {/* 이벤트 삭제 버튼 */}
-                <button 
-                  onClick={() => removeItineraryItem(dayIndex, eventIndex)}
-                  className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors"
-                >
-                  <FaTrash />
-                </button>
+        {/* 3. 메인 폼 카드: 모든 입력 필드와 버튼을 포함하는 컨테이너입니다. */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* 3a. 카드 헤더 */}
+          <div className="p-6 border-b">
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditMode ? '여행 계획 수정하기' : '새로운 여행 계획 만들기'}
+            </h1>
+          </div>
 
-                {/* 이벤트 타입에 따라 다른 폼 렌더링 */}
-                {event.type === 'visit' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <input type="text" name="place" value={event.place} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="방문 장소" className="w-full p-2 border rounded" />
-                    <input type="text" name="address" value={event.address} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="주소" className="w-full p-2 border rounded" />
-                    <input type="text" name="stayTime" value={event.stayTime} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="거주 시간 (예: 2시간)" className="w-full p-2 border rounded" />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <input type="text" name="transport" value={event.transport} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="교통수단 (예: 택시)" className="w-full p-2 border rounded" />
-                    <input type="text" name="start" value={event.start} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="출발 장소" className="w-full p-2 border rounded" />
-                    <input type="text" name="end" value={event.end} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="도착 장소" className="w-full p-2 border rounded" />
-                    <input type="text" name="duration" value={event.duration} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="소요 시간 (예: 30분)" className="w-full p-2 border rounded" />
-                  </div>
-                )}
+          {/* 3b. 폼 섹션 (기본 정보) */}
+          <div className="p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">기본 정보</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">여행 제목</label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={plan.title}
+                  onChange={handleBasicInfoChange}
+                  placeholder="예: 제주도 힐링 여행"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                />
               </div>
-            ))}
-
-            {/* 이벤트 추가 버튼 */}
-            <div className="flex space-x-4">
-              <button onClick={() => addItineraryItem(dayIndex, 'visit')} className="flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors">
-                <FaPlus className="mr-2" /> 방문 장소 추가
-              </button>
-              <button onClick={() => addItineraryItem(dayIndex, 'move')} className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors">
-                <FaPlus className="mr-2" /> 이동 경로 추가
-              </button>
+              <div>
+                <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-1">여행 지역</label>
+                <input
+                  type="text"
+                  id="region"
+                  name="region"
+                  value={plan.region}
+                  onChange={handleBasicInfoChange}
+                  placeholder="예: 제주도, 대한민국"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                />
+              </div>
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* 저장하기 버튼 */}
-      <div className="mt-8 flex justify-end">
-        <button
-          onClick={handleSave}
-          className="bg-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-opacity-90 transition-all duration-300"
-        >
-          저장하기
-        </button>
+          {/* 3c. 폼 섹션 (날짜 선택) */}
+          <div className="p-6 border-t">
+            <label className="block text-sm font-medium text-gray-700 mb-2">여행 날짜</label>
+            <DatePicker
+              selected={plan.startDate}
+              onChange={handleDateChange}
+              startDate={plan.startDate}
+              endDate={plan.endDate}
+              selectsRange
+              inline
+              className="w-full"
+              calendarClassName="border-none"
+            />
+          </div>
+
+          {/* 3d. 폼 섹션 (세부 일정) */}
+          <div className="p-6 border-t">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">세부 일정</h2>
+            {plan.itinerary.map((day, dayIndex) => (
+              <div key={dayIndex} className="mb-6 border-t pt-4 first:border-t-0 first:pt-0">
+                <h3 className="text-lg font-bold text-primary mb-4">
+                  Day {dayIndex + 1} - {formatDate(day.date)}
+                </h3>
+                
+                {day.events.map((event, eventIndex) => (
+                  <div key={eventIndex} className="bg-gray-50 p-4 rounded-md mb-4 relative">
+                    <button 
+                      onClick={() => removeItineraryItem(dayIndex, eventIndex)}
+                      className="absolute top-2 right-2 text-gray-400 hover:text-red-500 transition-colors"
+                      title="이벤트 삭제"
+                    >
+                      <FaTrash />
+                    </button>
+
+                    {event.type === 'visit' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <input type="text" name="place" value={event.place} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="방문 장소" className="w-full p-2 border rounded" />
+                        <input type="text" name="address" value={event.address} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="주소" className="w-full p-2 border rounded" />
+                        <input type="text" name="stayTime" value={event.stayTime} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="체류 시간 (예: 2시간)" className="w-full p-2 border rounded" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <input type="text" name="transport" value={event.transport} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="교통수단 (예: 택시)" className="w-full p-2 border rounded" />
+                        <input type="text" name="start" value={event.start} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="출발 장소" className="w-full p-2 border rounded" />
+                        <input type="text" name="end" value={event.end} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="도착 장소" className="w-full p-2 border rounded" />
+                        <input type="text" name="duration" value={event.duration} onChange={(e) => handleItineraryItemChange(dayIndex, eventIndex, e)} placeholder="소요 시간 (예: 30분)" className="w-full p-2 border rounded" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="flex space-x-4">
+                  <button onClick={() => addItineraryItem(dayIndex, 'visit')} className="flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors">
+                    <FaPlus className="mr-2" /> 방문 추가
+                  </button>
+                  <button onClick={() => addItineraryItem(dayIndex, 'move')} className="flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors">
+                    <FaPlus className="mr-2" /> 이동 추가
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 3e. 카드 푸터 (저장 버튼) */}
+          <div className="p-6 border-t text-right">
+            <button
+              onClick={handleSave}
+              className="bg-primary text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-green-600 transition-all duration-300"
+            >
+              저장하기
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

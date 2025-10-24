@@ -5,6 +5,10 @@
  * URL 파라미터로 받은 planId를 기반으로 상세 데이터를 렌더링합니다. (현재는 목업 데이터 사용)
  * 날짜별 일정, 이벤트(방문, 이동)를 타임라인 형태로 보여주고,
  * 수정 페이지로 이동할 수 있는 플로팅 액션 버튼(FAB)을 포함합니다.
+ * 
+ * UI 개선:
+ * - 페이지 전체에 배경색(bg-gray-50)과 패딩을 추가하여 시각적 깊이감을 줍니다.
+ * - 여행 기본 정보와 각 날짜별 일정을 별도의 카드(박스) UI로 감싸 시각적으로 분리합니다.
  */
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -61,8 +65,10 @@ function TravelDetailPage() {
   const plan = mockPlanDetail;
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+    // 요구사항 1: 페이지 배경색 및 패딩 추가
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      {/* 콘텐츠 중앙 정렬을 위한 래퍼 */}
+      <div className="max-w-4xl mx-auto">
         
         {/* 메인 페이지로 돌아가는 뒤로가기 버튼 */}
         <Link 
@@ -73,26 +79,26 @@ function TravelDetailPage() {
           <IoArrowBack size={24} className="text-gray-700" />
         </Link>
 
-        {/* 1. 최상단 헤더 */}
-        <header className="mb-8">
+        {/* 요구사항 2: 여행 기본 정보를 표시하는 카드(박스) UI */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h1 className="text-4xl font-extrabold text-gray-900">{plan.title}</h1>
           <p className="text-lg text-gray-600 mt-2">{plan.region}</p>
           <p className="text-sm text-gray-500 mt-1">Last Modified: {plan.lastModified}</p>
-        </header>
+        </div>
 
-        {/* 2. 세부 일정 (Itinerary) */}
+        {/* 세부 일정 (Itinerary) */}
         <main>
           {plan.itinerary.map((day, index) => (
-            // 날짜별 섹션
-            <section key={index} className="mb-12">
-              {/* 날짜 구분 */}
-              <div className="flex items-center mb-6">
+            // 요구사항 3: 각 날짜별 일정을 별도의 카드로 표시
+            <div key={index} className="bg-white rounded-lg shadow-md p-6 mb-4">
+              {/* 날짜 제목 및 내부 구분선 */}
+              <div className="flex items-center border-b pb-3 mb-4">
                 <h2 className="text-2xl font-bold text-primary">{`Day ${index + 1}`}</h2>
                 <p className="ml-4 text-xl font-medium text-gray-700">{day.date}</p>
               </div>
               
               {/* 이벤트 목록 (타임라인 형태) */}
-              <div className="border-l-2 border-primary pl-8 relative">
+              <div className="border-l-2 border-primary pl-8 relative mt-6">
                 {day.events.map((event, eventIndex) => (
                   <div key={eventIndex} className="mb-10 relative">
                     {/* 타임라인의 원형 아이콘 마커 */}
@@ -119,12 +125,12 @@ function TravelDetailPage() {
                   </div>
                 ))}
               </div>
-            </section>
+            </div>
           ))}
         </main>
       </div>
 
-      {/* 3. 수정하기 플로팅 액션 버튼 (FAB) */}
+      {/* 수정하기 플로팅 액션 버튼 (FAB) */}
       <Link
         to={`/edit/${plan.id}`} // 수정 페이지로 이동
         className="fixed bottom-8 right-8 bg-primary text-white w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:bg-green-600 transition-colors duration-300"
