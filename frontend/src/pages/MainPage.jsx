@@ -232,8 +232,8 @@ function MainPage() {
               <option value="modified_asc">마지막 수정시간 (과거순)</option>
               <option value="title_asc">제목 (오름차순)</option>
               <option value="title_desc">제목 (내림차순)</option>
-              <option value="date_asc">여행일정 (최근 다가오는 순)</option>
-              <option value="date_desc">여행일정 (과거 다가오는 순)</option>
+              <option value="date_asc">여행일정 (과거순)</option>
+              <option value="date_desc">여행일정 (미래순)</option>
             </select>
           </div>
         </div>
