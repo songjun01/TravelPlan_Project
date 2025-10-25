@@ -79,9 +79,18 @@ const AddNewPlanCard = () => (
 function MainPage() {
   // 현재 정렬 순서를 저장하기 위한 상태
   const [sortOrder, setSortOrder] = useState('modified_desc');
+  // [추가] 🚨 필터 상태를 저장하기 위한 상태. 'all', 'ongoing', 'future', 'past' 중 하나.
+  const [filterStatus, setFilterStatus] = useState('all');
 
   // [수정] 🚨 API로 받아온 여행 계획 목록을 저장할 상태
   const [travelPlans, setTravelPlans] = useState([]);
+
+  // [추가] 🚨 오늘 날짜를 자정 기준으로 계산하여 저장합니다. useMemo를 사용하여 한 번만 계산되도록 합니다.
+  const today = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0); // 시간을 00:00:00.000으로 설정하여 날짜만 비교할 수 있도록 합니다.
+    return now;
+  }, []); // 빈 의존성 배열: 컴포넌트가 처음 마운트될 때 한 번만 계산됩니다.
 
   // [수정] 🚨 컴포넌트 마운트 시 백엔드에서 데이터를 가져옵니다.
   useEffect(() => {
@@ -118,9 +127,37 @@ function MainPage() {
     }
   };
 
-  // [수정] 🚨 정렬 로직 구현: mockTravelPlans 대신 travelPlans 상태를 사용합니다.
+  // [추가] 🚨 필터링 로직 구현: travelPlans, filterStatus, today가 변경될 때마다 필터링을 다시 수행합니다.
+  const filteredPlans = useMemo(() => {
+    switch (filterStatus) {
+      case 'ongoing':
+        return travelPlans.filter(plan => {
+          const startDate = new Date(plan.startDate);
+          const endDate = new Date(plan.endDate);
+          // 오늘 날짜가 시작일과 종료일 사이에 있는 경우 (시작일 포함, 종료일 포함)
+          return today >= startDate && today <= endDate;
+        });
+      case 'future':
+        return travelPlans.filter(plan => {
+          const startDate = new Date(plan.startDate);
+          // 시작일이 오늘보다 미래인 경우
+          return startDate > today;
+        });
+      case 'past':
+        return travelPlans.filter(plan => {
+          const endDate = new Date(plan.endDate);
+          // 종료일이 오늘보다 과거인 경우
+          return endDate < today;
+        });
+      case 'all':
+      default:
+        return travelPlans; // 'all' 또는 기본값일 경우 모든 계획 반환
+    }
+  }, [travelPlans, filterStatus, today]); // 의존성 배열: travelPlans, filterStatus, today가 변경될 때 재계산
+
+  // [수정] 🚨 정렬 로직 구현: 이제 `travelPlans` 대신 `filteredPlans`를 기반으로 정렬합니다.
   const sortedPlans = useMemo(() => {
-    const sortablePlans = [...travelPlans]; // 원본 배열을 `travelPlans`로 변경
+    const sortablePlans = [...filteredPlans]; // 원본 배열을 `filteredPlans`로 변경
 
     sortablePlans.sort((a, b) => {
       switch (sortOrder) {
@@ -141,14 +178,49 @@ function MainPage() {
       }
     });
     return sortablePlans;
-  }, [travelPlans, sortOrder]); // 의존성 배열을 `travelPlans`로 변경
+  }, [filteredPlans, sortOrder]); // 의존성 배열을 `filteredPlans`로 변경
+
+  const getFilterButtonClass = (status) => (
+    `px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ` +
+    (filterStatus === status
+      ? 'bg-primary text-white'
+      : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
+  );
 
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <h1 className="text-3xl font-bold text-primary">My Travel Plans</h1>
           
+          {/* [추가] 🚨 필터 UI (버튼 그룹) */}
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={getFilterButtonClass('all')}
+            >
+              전체
+            </button>
+            <button
+              onClick={() => setFilterStatus('ongoing')}
+              className={getFilterButtonClass('ongoing')}
+            >
+              진행중
+            </button>
+            <button
+              onClick={() => setFilterStatus('future')}
+              className={getFilterButtonClass('future')}
+            >
+              미래
+            </button>
+            <button
+              onClick={() => setFilterStatus('past')}
+              className={getFilterButtonClass('past')}
+            >
+              과거
+            </button>
+          </div>
+
           {/* 정렬 UI (Select Dropdown) */}
           <div className="flex justify-end">
             <select

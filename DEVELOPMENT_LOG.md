@@ -583,6 +583,63 @@
 
 ---
 
+### Day 3 (2025.10.25)
+
+- **작업 내용**: 오늘 날짜를 기준으로 현재 진행중 / 과거 / 미래 계획만 필터링해서 볼 수 있는 기능을 추가
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, `MainPage.jsx` (메인 페이지)에 날짜 기반 **필터링 기능**을 추가합니다.
+
+기존의 정렬 기능은 그대로 유지되어야 하며, 필터링된 결과에 정렬이 적용되어야 합니다.
+
+### 1. 수정할 파일
+* `frontend/src/pages/MainPage.jsx`
+
+### 2. 요구 사항
+
+1.  **필터 상태(State) 추가:**
+    * `useState`를 사용하여 현재 필터 상태를 저장합니다.
+    * `const [filterStatus, setFilterStatus] = useState('all');`
+    * `'all'` (전체)을 기본값으로 설정합니다.
+
+2.  **필터 UI (버튼 그룹) 추가:**
+    * 페이지 제목(예: "내 여행 계획")과 기존의 정렬 드롭다운 **사이**에 필터 버튼 그룹을 추가합니다.
+    * '전체', '진행중', '미래', '과거' 4개의 `<button>`을 만듭니다.
+    * Tailwind CSS를 사용하여 버튼 그룹을 `flex`와 `space-x-2` 등으로 스타일링합니다.
+    * `onClick` 핸들러를 추가하여, 각 버튼 클릭 시 `setFilterStatus`를 호출합니다. (예: `onClick={() => setFilterStatus('ongoing')}`)
+    * **활성 스타일:** 현재 `filterStatus`와 일치하는 버튼은 `bg-primary` (메인 컬러)와 `text-white` 스타일을, 나머지는 `bg-white` 또는 `bg-gray-200` 스타일을 적용하여 활성화 상태를 시각적으로 표시합니다.
+
+3.  **날짜 비교 로직 추가:**
+    * `useMemo` 훅을 사용하여 오늘 날짜(자정 기준)를 계산하고 저장합니다.
+    * `const today = useMemo(() => { const now = new Date(); now.setHours(0, 0, 0, 0); return now; }, []);`
+    * (참고: `useMemo`의 의존성 배열이 `[]`이므로 이 값은 한 번만 계산됩니다.)
+
+4.  **로직 수정 (`useMemo` 체이닝):**
+
+    * **(a) [신규] `filteredPlans` 생성 (필터링 단계):**
+        * 기존의 `sortedPlans` `useMemo` **앞에** 새로운 `useMemo` 훅을 추가하여 `filteredPlans` 변수를 생성합니다.
+        * 이 `useMemo`는 `[plans, filterStatus, today]`에 의존합니다. (`plans`는 API에서 가져온 전체 목록 상태 변수라고 가정합니다.)
+        * 내부 로직:
+            * `switch (filterStatus)` 문을 사용합니다.
+            * `case 'ongoing'`: `today`가 `startDate`와 `endDate` 사이에 있는 계획만 반환합니다.
+            * `case 'future'`: `startDate`가 `today`보다 미래인 계획만 반환합니다.
+            * `case 'past'`: `endDate`가 `today`보다 과거인 계획만 반환합니다.
+            * `case 'all'` (및 `default`): `plans` 원본 배열을 그대로 반환합니다.
+            * (주의: `plan.startDate` 등은 `new Date()`로 파싱해서 `today`와 비교해야 합니다.)
+
+    * **(b) [수정] `sortedPlans` 수정 (정렬 단계):**
+        * **기존의 `sortedPlans`** `useMemo` 로직을 수정합니다.
+        * **입력값 변경:** `[...plans]` (또는 `[...mockTravelPlans]`) 대신, 방금 만든 `filteredPlans`를 사용하도록 변경합니다. (예: `const copy = [...filteredPlans];`)
+        * **의존성 배열 변경:** `[plans, sortOrder]` 대신 `[filteredPlans, sortOrder]`를 사용하도록 변경합니다.
+
+5.  **렌더링:**
+    * 최종적으로 `map`을 돌리는 배열은 `sortedPlans`를 그대로 사용합니다. (이 변수는 이제 필터링과 정렬이 모두 적용된 결과입니다.)
+
+6.  **주석:**
+    * `today` `useMemo`의 역할, 새로 추가된 `filteredPlans` `useMemo`의 필터링 로직, 그리고 `sortedPlans` `useMemo`가 `filteredPlans`를 입력으로 받도록 수정한 부분에 대해 상세한 주석을 달아주세요.
+```
+- **결과 및 수정사항**: 필터링 기능 구현 성공
+- **학습 내용**: Gemini CLI를 활용한 웹페이지 기능 추가
 
 
 
