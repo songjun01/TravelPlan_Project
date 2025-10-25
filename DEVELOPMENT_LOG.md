@@ -823,6 +823,73 @@
 
 ---
 
+- **작업 내용**: 메인 페이지 여행 계획 정렬기능 수정
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, `MainPage.jsx`의 정렬 로직을 수정합니다.
+
+**요구사항:** 즐겨찾기(`isFavorite: true`)로 표시된 여행 계획이, 사용자가 선택한 다른 정렬 기준(날짜, 제목 등)과 관계없이 **항상 목록의 최상단**에 먼저 표시되어야 합니다.
+
+(즉, 즐겨찾기된 항목들끼리 정렬되고, 그 아래에 즐겨찾기되지 않은 항목들끼리 정렬됩니다.)
+
+### 1. 수정할 파일
+* `frontend/src/pages/MainPage.jsx`
+
+### 2. 수정할 대상
+* `sortedPlans`를 생성하는 `useMemo` 훅 내부의 `copy.sort((a, b) => { ... })` 콜백 함수.
+
+### 3. 로직 수정
+`copy.sort()` 콜백 함수 내부의 로직을 다음과 같이 '다중 키 정렬'로 변경합니다.
+
+1.  기존 `switch` 문 **앞에** '즐겨찾기' 여부를 비교하는 **1순위 정렬 로직**을 추가합니다.
+    * `if (a.isFavorite !== b.isFavorite)`: 두 항목의 즐겨찾기 상태가 다르면,
+    * `return b.isFavorite ? 1 : -1;`
+        * (해석: `b`가 true(즐겨찾기)이면 1을 반환하여 `b`를 `a`보다 앞으로 보냅니다. `a`가 true이면 -1을 반환하여 `a`를 앞으로 보냅니다.)
+
+2.  두 항목의 즐겨찾기 상태가 동일한 경우(`if` 문을 통과한 경우)에만, 기존의 **2순위 정렬 로직**(`switch (sortOrder) { ... }`)이 실행되도록 합니다.
+
+**최종 `sortedPlans` `useMemo` 구조 예시:**
+
+```javascript
+const sortedPlans = useMemo(() => {
+  const copy = [...filteredPlans];
+
+  copy.sort((a, b) => {
+    // [신규] 1순위: 즐겨찾기 여부 (true가 항상 먼저 오도록)
+    if (a.isFavorite !== b.isFavorite) {
+      // b가 true이면 1 (b를 앞으로), a가 true이면 -1 (a를 앞으로)
+      return a.isFavorite ? -1 : 1; 
+      // [수정] 위 로직은 b가 앞으로 오게 함: return b.isFavorite ? 1 : -1;
+      // b.isFavorite(true) - a.isFavorite(false) = 1 (b가 먼저)
+      // a.isFavorite(true) - b.isFavorite(false) = 1 (a가 먼저 - 잘못됨)
+      // [정정된 로직]: b가 true일 때 1(b를 위로), a가 true일 때 -1(a를 위로)
+      return b.isFavorite ? 1 : -1;
+    }
+
+    // [기존] 2순위: 사용자가 선택한 정렬 기준 (즐겨찾기 상태가 같을 때만 실행됨)
+    switch (sortOrder) {
+      case 'modified_desc':
+        return new Date(b.lastModified) - new Date(a.lastModified);
+      case 'modified_asc':
+        return new Date(a.lastModified) - new Date(b.lastModified);
+      // ... (기타 모든 case)
+      default:
+        return 0;
+    }
+  });
+
+  return copy;
+}, [filteredPlans, sortOrder]);```
+4. 주석
+sort 콜백 함수 내부에 "1순위: 즐겨찾기 정렬"과 "2순위: 사용자 선택 정렬"로 로직이 분리되었음을 명시하는 상세한 주석을 달아주세요.
+```
+- **결과 및 수정사항**: 정렬 기능 정상 작동 확인
+- **학습 내용**: Gemini CLI를 활용한 정렬 기능 수정
+
+---
+
+
+
 
 
 

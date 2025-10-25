@@ -243,10 +243,19 @@ function MainPage() {
   }, [travelPlans, filterStatus, today]); // 의존성 배열: travelPlans, filterStatus, today가 변경될 때 재계산
 
   // [수정] 🚨 정렬 로직 구현: 이제 `travelPlans` 대신 `filteredPlans`를 기반으로 정렬합니다.
+  // [추가] 🚨 즐겨찾기된 항목이 항상 최상단에 오도록 1차 정렬 기준을 추가합니다.
   const sortedPlans = useMemo(() => {
-    const sortablePlans = [...filteredPlans]; // 원본 배열을 `filteredPlans`로 변경
+    const copy = [...filteredPlans]; // 원본 배열을 `filteredPlans`로 변경
 
-    sortablePlans.sort((a, b) => {
+    copy.sort((a, b) => {
+      // [주석] 🚨 1순위 정렬: 즐겨찾기 여부 (true가 항상 먼저 오도록)
+      // a.isFavorite가 true이면 -1 (a를 b보다 앞으로), b.isFavorite가 true이면 1 (b를 a보다 앞으로)
+      // 즉, isFavorite가 true인 항목이 false인 항목보다 먼저 오게 됩니다.
+      if (a.isFavorite !== b.isFavorite) {
+        return a.isFavorite ? -1 : 1; 
+      }
+
+      // [주석] 🚨 2순위 정렬: 사용자가 선택한 정렬 기준 (즐겨찾기 상태가 동일할 때만 적용)
       switch (sortOrder) {
         case 'modified_desc': 
           return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
@@ -264,7 +273,7 @@ function MainPage() {
           return 0;
       }
     });
-    return sortablePlans;
+    return copy;
   }, [filteredPlans, sortOrder]); // 의존성 배열을 `filteredPlans`로 변경
 
   const getFilterButtonClass = (status) => (
