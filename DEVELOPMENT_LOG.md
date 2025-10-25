@@ -653,6 +653,176 @@
 
 ---
 
+- **작업 내용**: 메인 페이지 여행 계획 즐겨찾기 기능 추가 1차 시도
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, `MainPage.jsx`의 여행 계획 카드 UI와 기능을 수정합니다.
+
+현재 카드 우측 상단의 '삭제 버튼'을 '더보기(점 3개)' 메뉴로 변경하고, 이 메뉴 안에 '즐겨찾기'와 '삭제' 기능을 넣습니다. 또한, 즐겨찾기된 항목은 아이콘으로 표시합니다.
+
+### 1. 수정할 파일
+* `frontend/src/pages/MainPage.jsx`
+
+### 2. Icon Imports
+* `react-icons`에서 다음 아이콘들을 import 합니다.
+    * `IoEllipsisVertical` (더보기 - 점 3개)
+    * `IoStar` (즐겨찾기됨 표시 - 채워진 별)
+    * `IoStarOutline` (즐겨찾기 추가 메뉴 - 빈 별)
+    * `IoTrashOutline` (삭제 메뉴)
+
+### 3. 데이터 구조 및 API 가정
+* 이 기능을 위해 백엔드 API `/api/plans/:planId`가 `isFavorite: true/false` 속성을 반환한다고 가정합니다.
+* `useEffect`로 불러온 `plans` 상태에 `isFavorite`가 포함되어 있어야 합니다.
+
+### 4. 상태(State) 추가
+* `MainPage.jsx` 컴포넌트 최상단에, 현재 열려있는 '더보기' 메뉴가 어떤 카드인지 식별하기 위한 `useState`를 추가합니다.
+* `const [openMenuId, setOpenMenuId] = useState(null);`
+
+### 5. 핸들러 함수 추가 (API 호출)
+
+**a. `handleToggleFavorite` (즐겨찾기 토글 함수):**
+* `async` 함수로 생성합니다. `(planId, currentIsFavorite)` 두 개의 인자를 받습니다.
+* `try...catch` 블록을 사용합니다.
+* `PATCH` (또는 `PUT`) 메서드를 사용해 `/api/plans/${planId}` 엔드포인트에 `isFavorite: !currentIsFavorite` 값을 전송하여 DB를 업데이트합니다.
+* **API 호출 성공 시:**
+    * `setPlans` (전체 목록 상태)를 호출하여 로컬 상태를 즉시 갱신합니다. (map을 돌려 해당 `planId`의 `isFavorite` 값만 토글)
+* **`finally` 블록:**
+    * `setOpenMenuId(null);` // 메뉴를 닫습니다.
+
+**b. `handleDelete` (삭제 함수):**
+* (기존에 있다면 수정, 없다면 생성) `async` 함수로 생성, `planId` 인자를 받습니다.
+* `DELETE` 메서드로 `/api/plans/${planId}`를 호출합니다.
+* **API 호출 성공 시:**
+    * `setPlans`를 호출하여 `filter` 메서드로 해당 `planId`를 로컬 상태에서 제거합니다.
+* **`finally` 블록:**
+    * `setOpenMenuId(null);` // 메뉴를 닫습니다.
+
+### 6. UI 수정 (`sortedPlans.map(...)` 내부)
+
+`sortedPlans.map((plan) => ...)`으로 순회하는 카드 컴포넌트 내부를 수정합니다.
+
+1.  **카드 컨테이너:**
+    * 카드 최상위 `div`에 `position: relative` (Tailwind: `relative`) 클래스가 적용되어 있는지 확인합니다.
+
+2.  **기존 삭제 버튼 삭제:**
+    * 카드 우측 상단에 있던 기존 '삭제 버튼' JSX를 **완전히 삭제**합니다.
+
+3.  **새로운 'Actions' 영역 추가:**
+    * '삭제 버튼'이 있던 자리에 (예: `absolute top-4 right-4`) 새로운 `div`를 추가합니다. 이 `div`는 즐겨찾기 아이콘과 더보기 메뉴를 감쌉니다.
+    * **적용할 클래스:** `absolute top-4 right-4 flex items-center space-x-2`
+
+4.  **a. [아이콘] 즐겨찾기 표시기:**
+    * 위 `div` 내부에, `plan.isFavorite`가 `true`일 때만 `IoStar` 아이콘이 렌더링되도록 조건부 렌더링을 추가합니다.
+    * **스타일:** `text-yellow-500`
+
+5.  **b. [메뉴] 더보기 버튼 및 드롭다운:**
+    * 즐겨찾기 표시기 바로 옆에 `position: relative` (Tailwind: `relative`)를 가진 `div`를 추가하여 드롭다운 컨테이너로 만듭니다.
+    * **(1) 더보기 버튼 (Trigger):**
+        * `<button>`을 만들고 `IoEllipsisVertical` 아이콘을 넣습니다.
+        * `onClick` 이벤트에 `setOpenMenuId(plan._id)`를 호출하는 함수를 연결합니다. (메뉴 토글 기능)
+        * *수정:* `onClick={() => setOpenMenuId(prevId => (prevId === plan._id ? null : plan._id))}`로 토글 로직을 구현합니다.
+    * **(2) 드롭다운 메뉴:**
+        * `openMenuId === plan._id`일 때만 렌더링되는 `div`를 버튼 바로 아래에 추가합니다.
+        * **스타일:** `absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg z-20`
+        * `<ul>` 내부에 메뉴 항목(`<li>`)을 만듭니다.
+            * **즐겨찾기 버튼:**
+                * `onClick={() => handleToggleFavorite(plan._id, plan.isFavorite)}`
+                * 아이콘(`IoStar` 또는 `IoStarOutline`)과 텍스트(`{plan.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}`)를 포함합니다.
+            * **삭제 버튼:**
+                * `onClick={() => handleDelete(plan._id)}`
+                * 아이콘(`IoTrashOutline`)과 '삭제' 텍스트를 포함합니다. (텍스트 색상: `text-red-600`)
+
+### 7. 주석
+* `openMenuId` 상태의 역할, 'Actions' 영역의 구조 (아이콘 + 드롭다운), 드롭다운의 `relative/absolute` 포지셔닝, `handleToggleFavorite` 및 `handleDelete` 함수의 API 호출 및 로컬 상태 업데이트 로직에 대해 상세한 주석을 달아주세요.
+```
+- **결과 및 수정사항**: 프론트엔드 상에는 즐겨찾기 구현이 되었지만, 서버에 저장되지 않아 페이지를 이동하면 즐겨찾기가 사라지는 문제 발생.
+- **학습 내용**: Gemini CLI를 활용한 웹페이지 기능 추가
+
+---
+
+- **작업 내용**: 메인 페이지 여행 계획 즐겨찾기 기능 추가 2차 시도
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, 메인 페이지의 '즐겨찾기' 기능이 페이지를 새로고침하거나 재방문하면 초기화되는 문제를 해결합니다.
+
+이 문제는 프론트엔드의 로컬 상태(`setPlans`)만 업데이트하고, 실제 서버(MongoDB)의 데이터를 업데이트하는 API 호출이 누락되었기 때문입니다.
+
+'낙관적 UI 업데이트(Optimistic UI Update)' 방식을 사용하여, (1) UI를 먼저 즉시 변경하고, (2) 백그라운드에서 서버 API를 호출하여 저장합니다.
+
+---
+
+### 1. 프론트엔드 수정 (`frontend/src/pages/MainPage.jsx`)
+
+`handleToggleFavorite` 함수를 수정하여 API 호출 및 에러 롤백 로직을 추가합니다.
+
+1.  **`handleToggleFavorite` 함수 수정:**
+    * 이 함수를 `async` 함수로 변경합니다. (예: `const handleToggleFavorite = async (planId, currentIsFavorite) => { ... }`)
+
+2.  **'낙관적 UI 업데이트' (기존 로직):**
+    * 함수 맨 처음에, **기존에 작성했던 로컬 `setPlans` 로직을 그대로 둡니다.**
+    * 이 로직은 `planId`를 찾아 `isFavorite` 값을 `!currentIsFavorite`로 토글하여 UI를 즉시(낙관적으로) 업데이트합니다.
+    * (참고: `setOpenMenuId(null)`도 그대로 둡니다.)
+
+3.  **'서버 저장' (API 호출):**
+    * `try...catch` 블록으로 API 호출 로직을 감쌉니다.
+    * `try` 블록 내부:
+        * `await fetch(`/api/plans/${planId}`, {`
+        * `  method: 'PATCH',`
+        * `  headers: { 'Content-Type': 'application/json' },`
+        * `  body: JSON.stringify({ isFavorite: !currentIsFavorite }) // 변경할 데이터만 전송`
+        * `});`
+        * `response.ok`가 `false`라면 에러를 `throw` 하여 `catch` 블록으로 넘깁니다.
+
+4.  **'에러 롤백' (Catch 블록):**
+    * `catch (error)` 블록 내부:
+        * `console.error('즐겨찾기 업데이트 실패:', error);`
+        * **(중요) `setPlans`를 다시 호출**하여, 방금 '낙관적'으로 변경했던 `isFavorite` 상태를 **원래의 `currentIsFavorite` 값으로 되돌려 놓습니다.** (롤백)
+        * 예: `setPlans(prevPlans => prevPlans.map(p => p._id === planId ? { ...p, isFavorite: currentIsFavorite } : p));`
+
+---
+
+### 2. 백엔드 수정 (예: `backend/routes/planRoutes.js`)
+
+프론트엔드에서 보낸 `PATCH` 요청을 받아 MongoDB를 실제로 업데이트하는 라우트 핸들러가 필요합니다.
+
+1.  백엔드의 `Plan` 라우트 파일을 엽니다. (Mongoose `Plan` 모델이 import 되어 있다고 가정합니다.)
+
+2.  **`PATCH /:planId` 라우트 추가 또는 수정:**
+    * `router.patch('/:planId', async (req, res) => { ... });`
+    * (참고: 이 라우트는 '즐겨찾기' 외에 제목, 지역 등 다른 필드도 업데이트할 수 있는 범용 업데이트 라우트입니다.)
+
+3.  **라우트 핸들러 로직:**
+    * `try...catch` 블록을 사용합니다.
+    * `const { planId } = req.params;`
+    * `const updateData = req.body;` // `{ isFavorite: true }` 또는 `{ title: '...' }` 등이 올 수 있음
+    * `const updatedPlan = await Plan.findByIdAndUpdate(`
+    * `  planId,`
+    * `  { $set: updateData }, // $set을 사용해 req.body의 특정 필드만 업데이트`
+    * `  { new: true, runValidators: true } // 업데이트된 문서를 반환하고, 스키마 검증 실행`
+    * `);`
+    * `if (!updatedPlan) { return res.status(404).json({ message: 'Plan not found' }); }`
+    * `res.json(updatedPlan);` // 성공 시 업데이트된 데이터 반환
+    * `catch (error)` 블록에서 500 에러를 반환합니다.
+
+### 3. 주석
+* `handleToggleFavorite` 함수의 '낙관적 UI 업데이트', '서버 API 호출', '에러 롤백' 3단계 로직에 대해 상세한 주석을 달아주세요.
+* 백엔드 `PATCH` 라우트가 `$set`을 사용하여 요청받은 필드만 동적으로 업데이트하는 부분에 대해 주석을 달아주세요.
+```
+- **결과 및 수정사항**: backend파일을 수정했음에도 여전히 즐겨찾기가 저장되지 않음
+- **학습 내용**: 프론트엔드-백엔드-서버 간 통신
+
+---
+
+- **작업 내용**: 메인 페이지 여행 계획 즐겨찾기 기능 추가 3차 시도
+- **Gemini CLI 사용 프롬프트**:
+```
+즐겨찾기 기능을 추가하고 싶은데 프론트엔드에는 구현했지만 서버에 저장이 안되는거 같아. 수정해줘
+```
+- **결과 및 수정사항**: 즐겨찾기 기능 구현 성공 및 정상 작동 확인
+- **학습 내용**: 프론트엔드-백엔드-서버 간 통신
+
+---
+
 
 
 
@@ -664,6 +834,10 @@
 2. **문제**: 여행 계획을 생성 후 저장하기를 누르면 '여행 계획을 찾을 수 없습니다'라는 글이 나오며 정상적으로 동작하지 않음을 확인.
    - **해결**: 새 계획 생성 후 백엔드로부터 받은 응답 데이터에서 MongoDB가 생성한 실제 _id를 가져오는 것이 아닌 존재하지 않는 id필드를 참조하려 했다는것을 발견하여 'frontend/src/pages/PlanEditorPage.jsx'파일의 handleSave 함수의 '생성 모드' 로직에서 response.data.id를 response.data._id로 수정.
    - **AI 활용**: Gemini AI에 문제 해결 방법 질문
+
+3. **문제**: 즐겨찾기 기능 구현 중 서버 파일을 수정했지만 여전히 저장이 되지 않는 문제
+   - **해결**: mongoDB 서버 자체를 재시작하여 문제 해결
+   - **AI 활용**: Gemini AI에 mongoDB 서버 재시작과 캐시 제거 방법 질문
 
 ---
 

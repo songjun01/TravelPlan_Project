@@ -10,7 +10,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { FaTrash } from 'react-icons/fa'; // [추가] 🚨 삭제 아이콘
+// [수정] 🚨 삭제 아이콘 대신 더보기, 즐겨찾기, 삭제 아이콘을 import 합니다.
+import { IoEllipsisVertical, IoStar, IoStarOutline, IoTrashOutline } from 'react-icons/io5';
 
 // 날짜 포맷을 'YYYY.MM.DD' 형태로 변환하는 헬퍼 함수
 const formatDate = (dateStr) => {
@@ -24,38 +25,85 @@ const formatDate = (dateStr) => {
 
 /**
  * [수정] 🚨 개별 여행 계획을 나타내는 카드 컴포넌트
- * onDelete prop을 받아서 삭제 버튼을 처리합니다.
+ * onDelete prop 대신 openMenuId, setOpenMenuId, handleToggleFavorite, handleDelete prop을 받아서 처리합니다.
  */
-const TravelPlanCard = ({ plan, onDelete }) => {
-  
-  // [추가] 🚨 삭제 버튼 클릭 핸들러
-  const handleDeleteClick = (e) => {
-    // 1. Link 태그의 내비게이션(페이지 이동)을 막습니다.
+const TravelPlanCard = ({ plan, openMenuId, setOpenMenuId, handleToggleFavorite, handleDelete }) => {
+  // [추가] 🚨 메뉴 열림 상태 확인
+  const isMenuOpen = openMenuId === plan._id;
+
+  // [추가] 🚨 더보기 버튼 클릭 핸들러 (메뉴 토글)
+  const handleEllipsisClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // 2. 부모 컴포넌트(MainPage)의 onDelete 함수를 호출합니다.
+    setOpenMenuId(prevId => (prevId === plan._id ? null : plan._id)); // 현재 메뉴를 열거나 닫습니다.
+  };
+
+  // [추가] 🚨 즐겨찾기 버튼 클릭 핸들러
+  const handleFavoriteClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleToggleFavorite(plan._id, plan.isFavorite);
+  };
+
+  // [추가] 🚨 삭제 버튼 클릭 핸들러
+  const handleDeleteClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (window.confirm(`'${plan.title}' 계획을 정말 삭제하시겠습니까?`)) {
-      onDelete(plan._id);
+      handleDelete(plan._id);
     }
   };
 
   return (
-    // [수정] 🚨 relative 추가 (삭제 버튼 위치 기준)
     <Link 
       to={`/plan/${plan._id}`}
       className="block bg-white p-6 rounded-lg shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out relative"
     >
-      {/* [추가] 🚨 삭제 버튼 */}
-      <button
-        onClick={handleDeleteClick}
-        className="absolute top-3 right-3 p-2 text-gray-400 hover:text-red-600 rounded-full transition-colors"
-        title="삭제하기"
-      >
-        <FaTrash />
-      </button>
+      {/* [수정] 🚨 기존 삭제 버튼 대신 Actions 영역 (즐겨찾기 아이콘 + 더보기 메뉴) */}
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
+        {/* [추가] 🚨 즐겨찾기 표시 아이콘 */}
+        {plan.isFavorite && (
+          <IoStar className="text-yellow-500 text-xl" title="즐겨찾기됨" />
+        )}
 
-      {/* [수정] 🚨 pr-8 (버튼 공간 확보) */}
+        {/* [추가] 🚨 더보기 메뉴 */}
+        <div className="relative">
+          <button
+            onClick={handleEllipsisClick}
+            className="p-1 text-gray-400 hover:text-gray-600 rounded-full transition-colors"
+            title="더보기"
+          >
+            <IoEllipsisVertical className="text-xl" />
+          </button>
+
+          {isMenuOpen && (
+            // [추가] 🚨 드롭다운 메뉴
+            <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg z-20 overflow-hidden">
+              <ul className="py-1">
+                <li>
+                  <button
+                    onClick={handleFavoriteClick}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    {plan.isFavorite ? <IoStar className="mr-2 text-yellow-500" /> : <IoStarOutline className="mr-2" />}
+                    {plan.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={handleDeleteClick}
+                    className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    <IoTrashOutline className="mr-2" />
+                    삭제
+                  </button>
+                </li>
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+
       <h3 className="text-xl font-bold text-gray-800 truncate pr-8">{plan.title}</h3> 
       <p className="text-gray-600 mt-2">{plan.location}</p>
       <p className="text-gray-500 text-sm mt-4">{`${formatDate(plan.startDate)} ~ ${formatDate(plan.endDate)}`}</p>
@@ -81,6 +129,8 @@ function MainPage() {
   const [sortOrder, setSortOrder] = useState('modified_desc');
   // [추가] 🚨 필터 상태를 저장하기 위한 상태. 'all', 'ongoing', 'future', 'past' 중 하나.
   const [filterStatus, setFilterStatus] = useState('all');
+  // [추가] 🚨 현재 열려있는 '더보기' 메뉴의 plan._id를 저장합니다. null이면 모든 메뉴가 닫혀있습니다.
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   // [수정] 🚨 API로 받아온 여행 계획 목록을 저장할 상태
   const [travelPlans, setTravelPlans] = useState([]);
@@ -108,8 +158,8 @@ function MainPage() {
     fetchPlans();
   }, []); // 빈 의존성 배열: 컴포넌트가 처음 렌더링될 때 한 번만 실행
 
-  // [추가] 🚨 여행 계획 삭제 핸들러
-  const handleDeletePlan = async (planId) => {
+  // [수정] 🚨 여행 계획 삭제 핸들러: 메뉴를 닫는 로직 추가
+  const handleDelete = async (planId) => {
     try {
       // 1. 백엔드에 DELETE API 요청
       await axios.delete(`/api/travel-plans/${planId}`);
@@ -124,6 +174,43 @@ function MainPage() {
     } catch (error) {
       console.error('계획 삭제 중 오류 발생:', error);
       alert('삭제에 실패했습니다.');
+    } finally {
+      // [추가] 🚨 메뉴 닫기
+      setOpenMenuId(null);
+    }
+  };
+
+  // [추가] 🚨 즐겨찾기 토글 핸들러
+  const handleToggleFavorite = async (planId, currentIsFavorite) => {
+    // [주석] 🚨 1. 낙관적 UI 업데이트: 서버 응답을 기다리지 않고 UI를 즉시 업데이트합니다.
+    // 이는 사용자 경험을 향상시키지만, 서버 요청 실패 시 롤백 로직이 필요합니다.
+    setTravelPlans(prevPlans => 
+      prevPlans.map(plan => 
+        plan._id === planId ? { ...plan, isFavorite: !currentIsFavorite } : plan
+      )
+    );
+    // [주석] 🚨 메뉴 닫기 (낙관적 업데이트와 함께 수행)
+    setOpenMenuId(null);
+
+    try {
+      // [주석] 🚨 2. 서버 API 호출: 백엔드에 PATCH 요청을 보내 즐겨찾기 상태를 업데이트합니다.
+      const response = await axios.patch(`/api/travel-plans/${planId}`, { isFavorite: !currentIsFavorite });
+      
+      if (response.status !== 200) { // 또는 !response.ok (fetch API 사용 시)
+        throw new Error('서버에서 즐겨찾기 업데이트 실패');
+      }
+      
+      alert(`계획이 즐겨찾기 ${currentIsFavorite ? '해제' : '추가'}되었습니다.`);
+
+    } catch (error) {
+      console.error('즐겨찾기 상태 변경 중 오류 발생:', error);
+      alert('즐겨찾기 상태 변경에 실패했습니다.');
+      // [주석] 🚨 3. 에러 롤백: 서버 요청 실패 시, 낙관적으로 변경했던 UI 상태를 원래대로 되돌립니다.
+      setTravelPlans(prevPlans => 
+        prevPlans.map(plan => 
+          plan._id === planId ? { ...plan, isFavorite: currentIsFavorite } : plan
+        )
+      );
     }
   };
 
@@ -232,8 +319,8 @@ function MainPage() {
               <option value="modified_asc">마지막 수정시간 (과거순)</option>
               <option value="title_asc">제목 (오름차순)</option>
               <option value="title_desc">제목 (내림차순)</option>
-              <option value="date_asc">여행일정 (과거순)</option>
-              <option value="date_desc">여행일정 (미래순)</option>
+              <option value="date_asc">여행일정 (최근 다가오는 순)</option>
+              <option value="date_desc">여행일정 (과거 다가오는 순)</option>
             </select>
           </div>
         </div>
@@ -245,7 +332,10 @@ function MainPage() {
             <TravelPlanCard 
               key={plan._id} 
               plan={plan} 
-              onDelete={handleDeletePlan} // 👈 삭제 핸들러 전달
+              openMenuId={openMenuId} // [추가] 🚨 메뉴 열림 상태 전달
+              setOpenMenuId={setOpenMenuId} // [추가] 🚨 메뉴 상태 변경 함수 전달
+              handleToggleFavorite={handleToggleFavorite} // [추가] 🚨 즐겨찾기 토글 핸들러 전달
+              handleDelete={handleDelete} // [수정] 🚨 삭제 핸들러 전달
             />
           ))}
           
