@@ -888,6 +888,89 @@ sort 콜백 함수 내부에 "1순위: 즐겨찾기 정렬"과 "2순위: 사용�
 
 ---
 
+### Day 4 (2025.10.26)
+
+- **작업 내용**: 여행 상세 페이지에 즐겨찾기 기능 표시 및 구현 1차 시도
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, `TravelDetailPage.jsx` (여행 상세 페이지)에 즐겨찾기 기능을 추가합니다.
+
+**요구사항:**
+1.  **위치:** '여행 기본 정보 박스'(제목, 지역 등이 있는 흰색 카드)의 **우측 상단**에 즐겨찾기 아이콘(별)을 표시합니다.
+2.  **기능:** `MainPage`에서 구현한 즐겨찾기 기능과 **완벽히 동일하게** 작동해야 합니다.
+    * 아이콘(채워진 별/빈 별)으로 현재 상태를 표시합니다.
+    * 클릭 시 '낙관적 UI 업데이트' (로컬 `plan` 상태 즉시 변경)를 수행합니다.
+    * 백그라운드에서 서버 API (`PATCH /api/plans/:planId`)를 호출하여 DB에 저장합니다.
+    * API 호출 실패 시, UI를 원래 상태로 롤백합니다.
+
+---
+
+### 1. 수정할 파일
+* `frontend/src/pages/TravelDetailPage.jsx`
+
+### 2. Icon Imports 추가
+* `react-icons` 라이브러리에서 `IoStar` (채워진 별)와 `IoStarOutline` (빈 별)을 import 합니다.
+
+### 3. '즐겨찾기 토글' 핸들러 함수 추가
+
+`useEffect`를 사용해 `plan` 데이터를 가져오는 로직 아래, 컴포넌트 내부에 `MainPage`에서 사용한 것과 동일한 로직의 `handleToggleFavorite` 함수를 새로 추가합니다.
+
+* 이 함수는 `async`여야 합니다.
+* 이 함수는 `plan` 상태 변수와 `setPlan` 상태 설정 함수를 직접 사용합니다.
+* `const originalPlan = plan;` // 롤백을 위해 현재 상태를 백업합니다.
+
+* **(a) 낙관적 UI 업데이트:**
+    * `setPlan(prevPlan => ({ ...prevPlan, isFavorite: !prevPlan.isFavorite }));`
+
+* **(b) API 호출 (`try...catch`):**
+    * `try` 블록에서 `PATCH /api/plans/${planId}`를 호출하여 `isFavorite` 상태를 서버에 전송합니다.
+        * `await fetch(`/api/plans/${planId}`, { ... body: JSON.stringify({ isFavorite: !originalPlan.isFavorite }) });`
+    * `catch` 블록 (에러 롤백):
+        * API 호출에 실패하면 `setPlan(originalPlan);`을 호출하여 UI를 원래 상태로 되돌립니다.
+        * `console.error`로 에러를 기록합니다.
+
+### 4. JSX (UI) 수정
+
+1.  **'여행 기본 정보 박스'에 `relative` 추가:**
+    * `title`, `region` 등이 들어있는 `div` (클래스 예: `bg-white rounded-lg shadow-md p-6 mb-6`)에 `relative` 클래스를 추가합니다.
+
+2.  **즐겨찾기 버튼 추가:**
+    * 위 `div` 내부의 **최상단**에 (텍스트 내용보다 먼저), 즐겨찾기 버튼을 추가합니다.
+    * 이 버튼은 `absolute` 포지셔닝을 사용해 우측 상단에 배치합니다.
+    * **적용할 클래스:** `absolute top-6 right-6` (박스의 `p-6` 패딩과 맞춤)
+    * `<button>` 태그를 사용하고 `onClick`에 방금 만든 `handleToggleFavorite` 함수를 연결합니다.
+    * **조건부 렌더링 (아이콘):**
+        * `plan.isFavorite`가 `true`이면 `<IoStar size={24} className="text-yellow-500" />`을 렌더링합니다.
+        * `plan.isFavorite`가 `false`이면 `<IoStarOutline size={24} className="text-gray-400" />`을 렌더링합니다.
+
+### 5. 주석
+* `handleToggleFavorite` 함수의 '낙관적 업데이트', 'API 호출', '에러 롤백' 3단계 로직에 대해 상세한 주석을 달아주세요.
+* JSX에 추가된 `relative` 컨테이너와 `absolute` 버튼의 역할에 대해 주석을 달아주세요.
+```
+- **결과 및 수정사항**: 여행 상세 페이지를 누르면 '여행 계획을 찾을 수 없거나 데이터를 불러오는 데 실패했습니다.'라고 나오며 문제 발생
+- **학습 내용**: Gemini CLI를 이용한 웹페이지 기능 추가
+
+---
+
+- **작업 내용**: 여행 상세 페이지에 즐겨찾기 기능 표시 및 구현 2차 시도
+- **Gemini CLI 사용 프롬프트**:
+```
+여행 상세페이지를 누르면 항상 '여행 계획을 찾을 수 없거나 데이터를 불러오는 데 실패했습니다.'이렇게 나오면서 정보가 나오지않아. 확인해줘
+```
+- **결과 및 수정사항**: 기능 구현 성공 및 정상 동작 확인
+- **학습 내용**: 프론트엔드-백엔드-서버 간 통신
+
+---
+
+- **작업 내용**: 여행 상세 페이지에서 즐겨찾기를 누르면 alert가 뜨게 수정
+- **Gemini CLI 사용 프롬프트**:
+```
+여행 상세 페이지에서도 메인페이지에서 즐겨찾기 한 것 처럼 alert가 뜨게 해줘
+```
+- **결과 및 수정사항**: 즐겨찾기를 눌렀을 때 alert가 나오는 것을 확인
+- **학습 내용**: 웹페이지 alert 기능
+
+---
 
 
 
@@ -905,6 +988,10 @@ sort 콜백 함수 내부에 "1순위: 즐겨찾기 정렬"과 "2순위: 사용�
 3. **문제**: 즐겨찾기 기능 구현 중 서버 파일을 수정했지만 여전히 저장이 되지 않는 문제
    - **해결**: mongoDB 서버 자체를 재시작하여 문제 해결
    - **AI 활용**: Gemini AI에 mongoDB 서버 재시작과 캐시 제거 방법 질문
+
+4. **문제**: 여행 상세 페이지를 누르면 '여행 계획을 찾을 수 없거나 데이터를 불러오는 데 실패했습니다.'라고 나오며 문제 발생
+   - **해결**: Gemini CLI로 코드 수정을 하는 중 API 경로 수정의 오류가 확인되어 이를 수정하여 해결.
+   - **AI 활용**: Gemini AI에 API 경로 확인 방법 질문
 
 ---
 

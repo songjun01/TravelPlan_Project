@@ -10,10 +10,11 @@
  */
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import axios from 'axios'; // axios import
+
 // 아이콘 라이브러리에서 아이콘들을 가져옵니다.
 import { FaMapPin, FaBus, FaPen } from 'react-icons/fa';
-import { IoArrowBack } from 'react-icons/io5'; // 뒤로가기 아이콘
+// IoStar와 IoStarOutline 아이콘을 import합니다. (즐겨찾기 기능용)
+import { IoArrowBack, IoStar, IoStarOutline } from 'react-icons/io5';
 
 // 🚨 목업 데이터(mockPlanDetail)는 사용하지 않습니다.
 
@@ -64,10 +65,14 @@ function TravelDetailPage() {
 
       try {
         // 백엔드 API에 GET 요청을 보내 특정 planId의 데이터를 가져옵니다.
-        const response = await axios.get(`/api/travel-plans/${planId}`);
+        const response = await fetch(`/api/travel-plans/${planId}`);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
         
         // 응답이 성공적이면 plan 상태를 업데이트합니다.
-        setPlan(response.data);
+        setPlan(data);
       } catch (err) {
         console.error('여행 계획 데이터 로딩 오류:', err);
         // 에러 발생 시 에러 상태를 설정합니다.
@@ -79,6 +84,47 @@ function TravelDetailPage() {
 
     fetchPlanData(); // 데이터 가져오는 함수 호출
   }, [planId]); // planId가 변경될 때마다 이 훅을 재실행합니다.
+
+  /**
+   * 즐겨찾기 상태를 토글하는 핸들러 함수.
+   * '낙관적 업데이트'를 사용하여 사용자 경험을 향상시킵니다.
+   */
+  const handleToggleFavorite = async () => {
+    if (!plan) return;
+
+    // 1. (롤백 대비) 현재 plan 상태를 백업합니다.
+    const originalPlan = plan;
+
+    // 2. (낙관적 UI 업데이트)
+    // API 요청을 기다리지 않고 UI를 즉시 업데이트하여 사용자에게 빠른 피드백을 제공합니다.
+    setPlan(prevPlan => ({
+      ...prevPlan,
+      isFavorite: !prevPlan.isFavorite
+    }));
+
+    try {
+      // 3. (API 호출) 백그라운드에서 서버에 변경된 즐겨찾기 상태를 전송합니다.
+      await fetch(`/api/travel-plans/${planId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFavorite: !originalPlan.isFavorite }), // 이전 상태의 반대 값을 전송
+      });
+      // 성공 시 별다른 처리가 필요 없습니다. UI는 이미 업데이트되었습니다.
+      // 사용자에게 상태 변경을 알립니다.
+      window.alert(
+        !originalPlan.isFavorite
+          ? "즐겨찾기에 추가되었습니다."
+          : "즐겨찾기에서 해제되었습니다."
+      );
+
+    } catch (err) {
+      // 4. (에러 롤백) API 호출이 실패하면 UI를 원래 상태로 되돌립니다.
+      console.error('즐겨찾기 상태 업데이트 실패:', err);
+      window.alert('즐겨찾기 상태 변경에 실패했습니다.'); // [추가] 실패 알림
+      setPlan(originalPlan); // 백업해둔 원래 plan으로 상태를 복원
+    }
+  };
+
 
   // 로딩 및 에러 상태에 따른 UI 처리
   if (loading) {
@@ -119,8 +165,28 @@ function TravelDetailPage() {
           <IoArrowBack size={24} className="text-gray-700" />
         </Link>
 
-        {/* 여행 기본 정보를 표시하는 카드(박스) UI */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        {/* 
+          여행 기본 정보를 표시하는 카드(박스) UI.
+          'relative' 클래스를 추가하여 내부의 즐겨찾기 버튼을 absolute 포지셔닝하기 위한 기준점으로 설정합니다.
+        */}
+        <div className="relative bg-white rounded-lg shadow-md p-6 mb-8">
+          {/* 
+            즐겨찾기 버튼.
+            'absolute'를 사용하여 부모('relative' 컨테이너)의 우측 상단에 배치합니다.
+            'top-6 right-6'은 부모의 패딩(p-6)과 일치시켜 정렬합니다.
+          */}
+          <button
+            onClick={handleToggleFavorite}
+            className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 transition-colors"
+            title={plan.isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+          >
+            {plan.isFavorite ? (
+              <IoStar size={24} className="text-yellow-500" />
+            ) : (
+              <IoStarOutline size={24} className="text-gray-400" />
+            )}
+          </button>
+
           <h1 className="text-4xl font-extrabold text-gray-900">{plan.title}</h1>
           <p className="text-lg text-gray-600 mt-2">{plan.location}</p>
           <p className="text-sm text-gray-500 mt-1">Last Modified: {formatDate(plan.lastModified)}</p>
