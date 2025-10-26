@@ -1034,7 +1034,7 @@ sort 콜백 함수 내부에 "1순위: 즐겨찾기 정렬"과 "2순위: 사용�
 2.  **주석:**
     * 새로 추가된 `transition` 및 `hover:scale-105` 클래스가 확대 애니메이션 효과를 위한 것임을 명시하는 주석을 달아주세요.
 ```
-- **결과 및 수정사항**: 
+- **결과 및 수정사항**: 정상 작동 확인
 - **학습 내용**: 웹페이지 마우스 hover 컨트롤
 
 ---
@@ -1063,8 +1063,127 @@ sort 콜백 함수 내부에 "1순위: 즐겨찾기 정렬"과 "2순위: 사용�
 2.  **주석:**
     * 4개 버튼에 공통으로 추가된 이 클래스들이 호버 시 확대 애니메이션 효과를 위한 것임을 명시하는 주석을 (버튼 그룹 상단에) 달아주세요.
 ```
-- **결과 및 수정사항**: 
+- **결과 및 수정사항**: 정상 작동 확인
 - **학습 내용**: 웹페이지 마우스 hover 컨트롤
+
+---
+
+- **작업 내용**: 정렬 기능의 기존 드롭다운을 커스텀 드롭다운으로 변경하고 하단 모서리 수정과 애니메이션 효과 부여
+- **Gemini CLI 사용 프롬프트**:
+```
+이전 프롬프트에 이어서, `MainPage.jsx`의 '정렬' 드롭다운 UI를 대폭 개선합니다.
+
+**문제:** 현재 `MainPage`의 정렬 기능은 기본 `<select>` 태그를 사용하고 있어, 드롭다운 목록에 애니메이션을 적용하거나 모서리를 둥글게 스타일링할 수 없습니다.
+
+**해결:**
+1.  새로운 라이브러리인 `@headlessui/react`를 설치합니다. (Tailwind CSS와 완벽히 호환됩니다.)
+2.  기존 `<select>` 태그를 Headless UI의 `Listbox` 컴포넌트로 교체합니다.
+3.  `Listbox`와 `Transition` 컴포넌트를 조합하여, 사용자가 요청한 **'부드러운 애니메이션'**과 **'둥근 모서리'**를 구현합니다.
+
+---
+
+### 1. (필수) 신규 라이브러리 설치
+
+* `frontend` 폴더에 `@headlessui/react`를 설치해야 합니다.
+* `frontend/package.json`의 `dependencies`에 `"@headlessui/react": "^2.0.0"` (또는 최신 버전)을 추가해 주세요.
+* `frontend/README.md`에 설치 방법(`npm install @headlessui/react` 또는 `yarn add @headlessui/react`)을 명시해 주세요.
+
+---
+
+### 2. `frontend/src/pages/MainPage.jsx` 파일 수정
+
+1.  **Import 추가:**
+    * `react`에서 `Fragment`를 import 합니다.
+    * `@headlessui/react`에서 `Listbox`, `Transition`을 import 합니다.
+    * `react-icons`에서 `IoChevronDown` (버튼용 화살표)와 `IoCheckmark` (선택된 항목 표시용)를 import 합니다.
+
+2.  **정렬 옵션 데이터 구조화:**
+    * 컴포넌트 상단에, `Listbox`에서 사용할 정렬 옵션 배열을 객체 형태로 정의합니다. (기존 `<option>` 태그를 대체)
+    * ```javascript
+        const sortOptions = [
+          { id: 'modified_desc', name: '마지막 수정시간 (최근순)' },
+          { id: 'modified_asc', name: '마지막 수정시간 (과거순)' },
+          { id: 'title_asc', name: '제목 (오름차순)' },
+          { id: 'title_desc', name: '제목 (내림차순)' },
+          { id: 'date_asc', name: '여행일정 (최근순)' },
+          { id: 'date_desc', name: '여행일정 (과거순)' },
+        ];
+        ```
+
+3.  **기존 `<select>` 삭제:**
+    * 정렬 기능을 담당하던 `<select>` 태그와 그 안의 `<option>` 태그들을 **모두 삭제**합니다.
+
+4.  **`Listbox` 컴포넌트 구현:**
+    * 삭제된 `<select>` 위치에 다음 구조를 추가합니다. (Tailwind 클래스 포함)
+    * ```jsx
+        {/* 정렬 UI (Listbox로 교체) */}
+        <div className="relative w-72"> {/* Listbox를 감싸는 컨테이너, relative 필수 */}
+          <Listbox value={sortOrder} onChange={setSortOrder}>
+            {/* 1. Listbox 버튼 (현재 선택된 값 표시) */}
+            <Listbox.Button className="relative w-full cursor-pointer rounded-md bg-white py-2 pl-3 pr-10 text-left shadow-sm border focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-primary-light">
+              <span className="block truncate">
+                {/* 현재 선택된 옵션의 'name'을 표시 */}
+                {sortOptions.find(opt => opt.id === sortOrder)?.name}
+              </span>
+              <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                <IoChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              </span>
+            </Listbox.Button>
+            
+            {/* 2. Listbox 옵션 목록 (애니메이션 및 스타일 적용) */}
+            <Transition
+              as={Fragment}
+              leave="transition ease-in duration-100"
+              leaveFrom="opacity-100"
+              leaveTo="opacity-0"
+              // (참고) '펼쳐질 때' 애니메이션은 'enter' 클래스를 사용합니다.
+              enter="transition ease-out duration-100"
+              enterFrom="transform opacity-0 scale-95"
+              enterTo="transform opacity-100 scale-100"
+            >
+              <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-10">
+                {/* [요청사항] '둥근 모서리'가 'rounded-md'로 여기에 적용되었습니다. */}
+                
+                {sortOptions.map((option) => (
+                  <Listbox.Option
+                    key={option.id}
+                    value={option.id}
+                    className={({ active }) =>
+                      `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
+                        active ? 'bg-primary/10 text-primary' : 'text-gray-900'
+                      }`
+                    }
+                  >
+                    {({ selected }) => (
+                      <>
+                        <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                          {option.name}
+                        </span>
+                        {/* 선택된 항목은 체크마크 표시 */}
+                        {selected ? (
+                          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary">
+                            <IoCheckmark className="h-5 w-5" aria-hidden="true" />
+                          </span>
+                        ) : null}
+                      </>
+                    )}
+                  </Listbox.Option>
+                ))}
+              </Listbox.Options>
+            </Transition>
+          </Listbox>
+        </div>
+        ```
+
+### 3. 주석
+* 기존 `<select>`를 `Listbox`로 교체한 이유(스타일링 한계)를 주석으로 명시해 주세요.
+* `Listbox.Button`이 현재 선택된 값을 표시하는 버튼임을 설명해 주세요.
+* `<Transition>` 컴포넌트의 `enter...`, `leave...` 클래스들이 **부드러운 애니메이션 효과**를 담당한다고 설명해 주세요.
+* `<Listbox.Options>`의 `rounded-md` 클래스가 **둥근 모서리**를 구현하는 부분임을 주석으로 달아주세요.
+* `Listbox.Option` 내부의 `active`와 `selected` 상태를 사용하여 호버(hover) 및 선택 스타일을 동적으로 적용하는 로직을 설명해 주세요.
+```
+- **결과 및 수정사항**: 커스텀 드롭다운 적용 성공
+- **학습 내용**: 웹페이지 커스텀 드롭다운 적용
 
 ---
 

@@ -7,11 +7,12 @@
  * 2. (DELETE) 삭제 API를 호출하는 핸들러를 추가합니다.
  * 3. (UI) TravelPlanCard 컴포넌트에 삭제 버튼을 추가하고, 핸들러를 prop으로 전달합니다.
  */
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { Listbox, Transition } from '@headlessui/react';
 // [수정] 🚨 삭제 아이콘 대신 더보기, 즐겨찾기, 삭제 아이콘을 import 합니다.
-import { IoEllipsisVertical, IoStar, IoStarOutline, IoTrashOutline } from 'react-icons/io5';
+import { IoEllipsisVertical, IoStar, IoStarOutline, IoTrashOutline, IoChevronDown, IoCheckmark } from 'react-icons/io5';
 
 // 날짜 포맷을 'YYYY.MM.DD' 형태로 변환하는 헬퍼 함수
 const formatDate = (dateStr) => {
@@ -139,6 +140,15 @@ const AddNewPlanCard = () => (
     </p>
   </Link>
 );
+
+const sortOptions = [
+  { id: 'modified_desc', name: '마지막 수정시간 (최근순)' },
+  { id: 'modified_asc', name: '마지막 수정시간 (과거순)' },
+  { id: 'title_asc', name: '제목 (오름차순)' },
+  { id: 'title_desc', name: '제목 (내림차순)' },
+  { id: 'date_asc', name: '여행일정 (최근순)' },
+  { id: 'date_desc', name: '여행일정 (과거순)' },
+];
 
 
 function MainPage() {
@@ -337,20 +347,67 @@ function MainPage() {
             </button>
           </div>
 
-          {/* 정렬 UI (Select Dropdown) */}
-          <div className="flex justify-end">
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className="border rounded-md px-3 py-2 text-gray-700"
-            >
-              <option value="modified_desc">마지막 수정시간 (최근순)</option>
-              <option value="modified_asc">마지막 수정시간 (과거순)</option>
-              <option value="title_asc">제목 (오름차순)</option>
-              <option value="title_desc">제목 (내림차순)</option>
-              <option value="date_asc">여행일정 (최근 다가오는 순)</option>
-              <option value="date_desc">여행일정 (과거 다가오는 순)</option>
-            </select>
+          {/* 정렬 UI (Listbox로 교체) */}
+          {/* 기존 <select>는 OS 기본 UI를 사용하여 스타일링에 한계가 있으므로,
+              @headlessui/react의 Listbox를 사용하여 커스텀 드롭다운을 구현합니다. */}
+          <div className="relative w-72"> {/* Listbox를 감싸는 컨테이너, relative 필수 */}
+            <Listbox value={sortOrder} onChange={setSortOrder}>
+              {/* 1. Listbox 버튼 (현재 선택된 값 표시) */}
+              <Listbox.Button className="relative w-full cursor-pointer rounded-md bg-white py-2 pl-3 pr-10 text-left shadow-sm border focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-primary-light">
+                <span className="block truncate">
+                  {/* 현재 선택된 옵션의 'name'을 표시 */}
+                  {sortOptions.find(opt => opt.id === sortOrder)?.name}
+                </span>
+                <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                  <IoChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </span>
+              </Listbox.Button>
+              
+              {/* 2. Listbox 옵션 목록 (애니메이션 및 스타일 적용) */}
+              {/* Transition 컴포넌트의 enter/leave 관련 클래스는 '부드러운 애니메이션 효과'를 담당합니다. */}
+              <Transition
+                as={Fragment}
+                leave="transition ease-in duration-100"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
+                // (참고) '펼쳐질 때' 애니메이션은 'enter' 클래스를 사용합니다.
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+              >
+                {/* Listbox.Options의 'rounded-md' 클래스가 '둥근 모서리'를 구현합니다. */}
+                <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black/5 focus:outline-none sm:text-sm z-10">
+                  
+                  {sortOptions.map((option) => (
+                    <Listbox.Option
+                      key={option.id}
+                      value={option.id}
+                      // 'active' 상태(마우스 호버)에 따라 배경색을 동적으로 변경합니다.
+                      className={({ active }) =>
+                        `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
+                          active ? 'bg-primary/10 text-primary' : 'text-gray-900'
+                        }`
+                      }
+                    >
+                      {({ selected }) => (
+                        // 'selected' 상태에 따라 글꼴 두께와 체크마크를 다르게 표시합니다.
+                        <>
+                          <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                            {option.name}
+                          </span>
+                          {/* 선택된 항목은 체크마크 표시 */}
+                          {selected ? (
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-primary">
+                              <IoCheckmark className="h-5 w-5" aria-hidden="true" />
+                            </span>
+                          ) : null}
+                        </>
+                      )}
+                    </Listbox.Option>
+                  ))}
+                </Listbox.Options>
+              </Transition>
+            </Listbox>
           </div>
         </div>
         
