@@ -294,7 +294,7 @@ function MainPage() {
   }, [filteredPlans, sortOrder]); // 의존성 배열을 `filteredPlans`로 변경
 
   const getFilterButtonClass = (status) => (
-    `px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ` +
+    `px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 transform hover:scale-110 ` +
     (filterStatus === status
       ? 'bg-primary text-white'
       : 'bg-gray-200 text-gray-700 hover:bg-gray-300')
@@ -306,7 +306,10 @@ function MainPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <h1 className="text-3xl font-bold text-primary">My Travel Plans</h1>
           
-          {/* [추가] 🚨 필터 UI (버튼 그룹) */}
+          {/* 
+            [추가] 🚨 필터 UI (버튼 그룹)
+            - 각 버튼은 호버 시 확대되는 애니메이션 효과(transform, hover:scale-110)를 가집니다.
+          */}
           <div className="flex space-x-2">
             <button
               onClick={() => setFilterStatus('all')}
