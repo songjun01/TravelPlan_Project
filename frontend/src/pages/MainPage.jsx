@@ -114,12 +114,29 @@ const TravelPlanCard = ({ plan, openMenuId, setOpenMenuId, handleToggleFavorite,
 
 /**
  * 새로운 계획을 추가하는 버튼 역할을 하는 카드 컴포넌트
+ * [수정] group-hover를 사용하여 마우스를 올렸을 때 텍스트가 나타나는 효과를 추가합니다.
+ * [수정] hover:scale-105를 추가하여 마우스를 올렸을 때 카드가 확대되는 효과를 추가합니다.
  */
 const AddNewPlanCard = () => (
-  <Link to="/create-plan" className="flex items-center justify-center bg-gray-50 p-6 rounded-lg border-2 border-dashed border-primary hover:bg-primary group transition-all duration-300 ease-in-out">
-    <div className="text-center">
-      <span className="text-5xl text-primary group-hover:text-white transition-colors duration-300">+</span>
-    </div>
+  // 1. <Link>에 `group` 클래스를 추가하여 하위 엘리먼트에서 `group-hover`를 사용할 수 있도록 합니다.
+  // 2. `flex-col`을 추가하여 아이콘과 텍스트를 수직으로 정렬합니다.
+  // 3. `transform`과 `hover:scale-105`를 추가하여 호버 시 확대되는 애니메이션 효과를 적용합니다.
+  <Link 
+    to="/create-plan" 
+    className="group flex flex-col items-center justify-center bg-gray-50 p-6 rounded-lg border-2 border-dashed border-primary hover:bg-primary transition-all duration-300 ease-in-out transform hover:scale-105"
+  >
+    {/* 아이콘: group-hover 시 색상이 흰색으로 변경됩니다. */}
+    <span className="text-5xl text-primary group-hover:text-white transition-colors duration-300">+</span>
+    
+    {/* 
+      설명 텍스트:
+      - 기본적으로 `opacity-0`으로 숨겨져 있습니다.
+      - 부모(`group`)에 호버하면 `group-hover:opacity-100`에 의해 부드럽게 나타납니다.
+      - `transition-opacity`와 `duration-300`으로 애니메이션 효과를 줍니다.
+    */}
+    <p className="font-medium text-sm text-primary group-hover:text-white mt-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+      새로운 여행 계획을 추가합니다
+    </p>
   </Link>
 );
 
